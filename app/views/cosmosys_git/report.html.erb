@@ -1,0 +1,6 @@
+<h2>CosmosysGitController#report</h2>
+
+<p>THIS WILL CREATE THE REPORTS OF THE PROJECT ISSUES IN THE REPO DIRECTORY.</p>
+<%= form_tag({:controller => 'cosmosys_git', :action => 'report'}, :class => "tabular", :multipart => true) do %>
+<%= submit_tag l(:button_report) %>
+<% end %>

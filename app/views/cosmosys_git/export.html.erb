@@ -1,0 +1,6 @@
+<h2>CosmosysGitController#export</h2>
+
+<p>THIS WILL OVERWRITE THE DOWNLOAD FILE AT REPO.</p>
+<%= form_tag({:controller => 'cosmosys_git', :action => 'export'}, :class => "tabular", :multipart => true) do %>
+<%= submit_tag l(:button_export) %>
+<% end %>

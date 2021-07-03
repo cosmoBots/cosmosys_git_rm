@@ -1,0 +1,7 @@
+<h2>CosmosysGitController#import</h2>
+
+<p>THIS WILL UPLOAD THE IMPORT DOCUMENT FROM THE REPO TO THE REDMINE.</p>
+<%= form_tag({:controller => 'cosmosys_git', :action => 'import'}, :class => "tabular", :multipart => true) do %>
+<%= submit_tag l(:button_import) %>
+<% end %>
+
