@@ -71,8 +71,38 @@ class CosmosysGitController < ApplicationController
   private
 
   require 'fileutils'
+  require 'yaml'
+  require 'gitlab'
+
+  def check_create_gitlab_prj(gitlabconfig, prj_identifier, ssh_url)
+    puts("+++++++check_create_gitlab_prj++++++++")    
+    Gitlab.configure do |config|
+      config.endpoint = gitlabconfig['endpoint']+'/api/v4'
+      config.private_token  = gitlabconfig['roottoken']
+    end
+    puts("++++++++++++++++++++++++++ GITLAB connection +++++++++++++++++++++++\n")
+    projects = Gitlab.projects
+    thisproject = nil
+    projects.each{|p|
+      puts(p.to_hash)
+      puts("name")
+      puts(p.name)
+      if (p.ssh_url_to_repo == ssh_url) then
+        thisproject = p 
+      end
+    }
+    if (thisproject == nil) then
+      puts("We need to create a project")
+      thisproject = Gitlab.create_project prj_identifier
+      puts "#{prj_identifier} created on #{thisproject.ssh_url_to_repo}"
+    else
+      puts("The project already exists "+thisproject.ssh_url_to_repo)
+    end
+    return thisproject
+  end
 
   def create_template_repo(remoteurl)
+    puts("+++++++create_template_repo++++++++")
     s = Setting.find_by_name("plugin_cosmosys_git")
     if (s != nil) then
       if (s.value != nil) then
@@ -86,8 +116,13 @@ class CosmosysGitController < ApplicationController
               FileUtils.mkdir_p ret
               comando = "cp -r plugins/cosmosys_git/assets/template/* #{ret}"
               puts("\n\n #{comando}")
-              `#{comando}`        
-              comando = "cd #{ret}; git remote add origin #{remoteurl}"
+              `#{comando}`
+              ## TODO: THIS IMPLIES GITLAB INCLUDED
+              gitlabconfig = YAML.load(File.read("/home/redmine/gitlabapicfg.yaml"))
+              puts("yaml leído")
+              puts(gitlabconfig)
+              gitlabproject = check_create_gitlab_prj(gitlabconfig,reponame,remoteurl)
+              comando = "cd #{ret}; git init; git remote add origin #{remoteurl}"
               puts("\n\n #{comando}")
               `#{comando}`               
               comando = "cd #{ret}; git add .;git commit -m \"Initial commit\";git push all"
@@ -110,6 +145,7 @@ class CosmosysGitController < ApplicationController
   end
 
   def get_expected_repo_path(prj_identifier)
+    puts("+++++++get_expected_repo_path++++++++")    
     s = Setting.find_by_name("plugin_cosmosys_git")
     if (s != nil) then
       if (s.value != nil) then
@@ -123,6 +159,7 @@ class CosmosysGitController < ApplicationController
   end
 
   def get_expected_repo_rm_mirror_path(pridentifier)
+    puts("+++++++get_expected_repo_rm_mirror_path++++++++")        
     s = Setting.find_by_name("plugin_cosmosys_git")
     if (s != nil) then
       if (s.value != nil) then
@@ -136,6 +173,7 @@ class CosmosysGitController < ApplicationController
   end
 
   def download_create_template_repo(repo_folder)
+    puts("+++++++download_create_template_repo++++++++")            
     remoteurl = nil
     s = Setting.find_by_name("plugin_cosmosys_git")
     if (s != nil) then
@@ -167,6 +205,7 @@ class CosmosysGitController < ApplicationController
   end
 
   def update_create_repo_folder
+    puts("+++++++update_create_repo_folder++++++++")                
     # Chec if repo folder exists
     repo_folder = get_expected_repo_path(@project.identifier)
     if  repo_folder != nil then
@@ -193,6 +232,7 @@ class CosmosysGitController < ApplicationController
   end
 
   def check_create_repo_rm_mirror(repo_folder)
+    puts("+++++++check_create_repo_rm_mirror++++++++")         
     ret = get_expected_repo_rm_mirror_path(@project.identifier)
     if  ret != nil then
       if not(File.directory?(ret)) then
@@ -213,8 +253,6 @@ class CosmosysGitController < ApplicationController
     return ret    
   end
 
-  def check_create_gitlab_prj
-  end
 
   def import_project_repo
   end
