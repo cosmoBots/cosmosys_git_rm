@@ -31,33 +31,33 @@ class CosmosysGitController < ApplicationController
       print("export GET!!!!!")      
     else
       print("export POST!!!!!")
-    end
-    ret = nil
-    returnmessage = ""
-    repo_folder,remoteurl = update_create_repo_folder()
-    if repo_folder != nil then
-      ret = export_project_repo(repo_folder)
-      if (ret) then
-        ret = commit_push_project_repo(repo_folder)
+      ret = nil
+      returnmessage = ""
+      repo_folder,remoteurl = update_create_repo_folder()
+      if repo_folder != nil then
+        ret = export_project_repo(repo_folder)
         if (ret) then
-          rm_mirror_folder = update_create_repo_rm_mirror(remoteurl)
-          if rm_mirror_folder != nil then
-            returnmessage += "Everything went OK"
+          ret = commit_push_project_repo(repo_folder)
+          if (ret) then
+            rm_mirror_folder = update_create_repo_rm_mirror(remoteurl)
+            if rm_mirror_folder != nil then
+              returnmessage += "Everything went OK"
+            else
+              ret = false
+              returnmessage += "Problems creating the mirror Redmine repo"
+            end
           else
-            ret = false
-            returnmessage += "Problems creating the mirror Redmine repo"
+            returnmessage += "Problems commiting/pushing the Git repo"
           end
         else
-          returnmessage += "Problems commiting/pushing the Git repo"
+          returnmessage += "Problems exporting the project to the Git repo"
         end
-      else
-        returnmessage += "Problems exporting the project to the Git repo"
       end
-    end
-    if (ret != nil) then 
-      flash[:notice] = returnmessage
-    else
-      flash[:error] = returnmessage
+      if (ret != nil) then 
+        flash[:notice] = returnmessage
+      else
+        flash[:error] = returnmessage
+      end
     end
   end
 
