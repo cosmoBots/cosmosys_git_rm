@@ -33,15 +33,31 @@ class CosmosysGitController < ApplicationController
       print("export POST!!!!!")
     end
     ret = nil
+    returnmessage = ""
     repo_folder,remoteurl = update_create_repo_folder()
     if repo_folder != nil then
-      ret = export_project_repo(repo_folder,remoteurl)
-      rm_mirror_folder = update_create_repo_rm_mirror(repo_folder)
+      ret = export_project_repo(repo_folder)
+      if (ret) then
+        ret = commit_push_project_repo(repo_folder)
+        if (ret) then
+          rm_mirror_folder = update_create_repo_rm_mirror(remoteurl)
+          if rm_mirror_folder != nil then
+            returnmessage += "Everything went OK"
+          else
+            ret = false
+            returnmessage += "Problems creating the mirror Redmine repo"
+          end
+        else
+          returnmessage += "Problems commiting/pushing the Git repo"
+        end
+      else
+        returnmessage += "Problems exporting the project to the Git repo"
+      end
     end
     if (ret != nil) then 
-      flash[:notice] = "Everything went fine"
+      flash[:notice] = returnmessage
     else
-      flash[:error] = "Something happened"
+      flash[:error] = returnmessage
     end
   end
 
@@ -74,11 +90,18 @@ class CosmosysGitController < ApplicationController
   require 'yaml'
   require 'gitlab'
 
+  def commit_push_project_repo(repo_folder)
+    comando = "cd #{repo_folder}; git add .;git commit -m \"[csys bot] Export executed\";git push --all"
+    puts("\n\n #{comando}")
+    `#{comando}`
+    return true
+  end
+
   def check_create_gitlab_prj(gitlabconfig, prj_identifier, ssh_url)
     puts("+++++++check_create_gitlab_prj++++++++")    
     Gitlab.configure do |config|
       config.endpoint = gitlabconfig['endpoint']+'/api/v4'
-      config.private_token  = gitlabconfig['roottoken']
+      config.private_token  = gitlabconfig['authtoken']
     end
     puts("++++++++++++++++++++++++++ GITLAB connection +++++++++++++++++++++++\n")
     projects = Gitlab.projects
@@ -109,7 +132,7 @@ class CosmosysGitController < ApplicationController
         puts("The setting exists")
         reponame = s.value["repo_template_id"]
         if (reponame != nil) then
-          ret = get_expected_repo_path(reponame)
+          ret,ignoreurl = get_expected_repo_path(reponame)
           if  ret != nil then
             if not(File.directory?(ret)) then
               # Create it
@@ -125,7 +148,7 @@ class CosmosysGitController < ApplicationController
               comando = "cd #{ret}; git init; git remote add origin #{remoteurl}"
               puts("\n\n #{comando}")
               `#{comando}`               
-              comando = "cd #{ret}; git add .;git commit -m \"Initial commit\";git push all"
+              comando = "cd #{ret}; git add .;git commit -m \"Initial commit\";git push --all"
               puts("\n\n #{comando}")
               output = `#{comando}`               
               puts("=====================")
@@ -150,26 +173,14 @@ class CosmosysGitController < ApplicationController
     if (s != nil) then
       if (s.value != nil) then
         puts("The setting exists")
-        return s.value["repo_local_path"].gsub("%project_id%",prj_identifier)
+        ret = s.value["repo_local_path"].gsub("%project_id%",prj_identifier)
+        ret2 = s.value["repo_server_path"].gsub("%project_id%",prj_identifier)
+        return ret,ret2
       end
     else
       puts("The setting does not exist")
     end
-    return nil
-  end
-
-  def get_expected_repo_rm_mirror_path(pridentifier)
-    puts("+++++++get_expected_repo_rm_mirror_path++++++++")        
-    s = Setting.find_by_name("plugin_cosmosys_git")
-    if (s != nil) then
-      if (s.value != nil) then
-        puts("The setting exists")
-        return s.value["repo_redmine_path"].gsub("%project_id%",pridentifier)
-      end
-    else
-      puts("The setting does not exist")
-    end
-    return nil
+    return nil,nil
   end
 
   def download_create_template_repo(repo_folder)
@@ -195,63 +206,91 @@ class CosmosysGitController < ApplicationController
             puts("Created!!!"+repo_folder)
           else
             create_template_repo(remoteurl)
+            comando = "git clone #{remoteurl} #{repo_folder}"
+            puts("\n\n #{comando}")
+            output = `#{comando}`
           end
+          comando = "cd #{repo_folder}; rm -rf .git; git init; git add .; git commit -m \"Initial commit from template\";"
+          puts("\n\n #{comando}")
+          output = `#{comando}`
         end
       end
     else
       puts("The setting does not exist")
     end
-    return remoteurl
+    return ret
   end
 
   def update_create_repo_folder
     puts("+++++++update_create_repo_folder++++++++")                
     # Chec if repo folder exists
-    repo_folder = get_expected_repo_path(@project.identifier)
+    repo_folder,remote_url = get_expected_repo_path(@project.identifier)
     if  repo_folder != nil then
       if not(File.directory?(repo_folder)) then
         # The folder does not exist, we need to pull it from the template repo
-        remoteurl = download_create_template_repo(repo_folder)
-        if remoteurl then
-          puts("Cloned!: "+repo_folder+" "+remoteurl)
+        template_name = download_create_template_repo(repo_folder)
+        if template_name then
+          if (File.directory?(repo_folder)) then
+            puts("Created!!!"+repo_folder)
+            comando = "cd #{repo_folder}; git remote add origin #{remote_url}; git push --all"
+            puts("\n\n #{comando}")
+            output = `#{comando}`            
+          end
         else
           puts("Error trying to download template for "+repo_folder)
         end
       else
-        if update_create_repo_folder(repo_folder) then
-          puts("Updated!: "+repo_folder)
-        else
-          puts("Error trying to update "+ret)
-        end        
+
       end
       puts("Folder: "+repo_folder)
     else
       puts("Error, the setting does not exist")
     end
-    return repo_folder,remoteurl
+    return repo_folder,remote_url
   end
 
-  def check_create_repo_rm_mirror(repo_folder)
-    puts("+++++++check_create_repo_rm_mirror++++++++")         
-    ret = get_expected_repo_rm_mirror_path(@project.identifier)
-    if  ret != nil then
+  def get_expected_rmrepo_path(prj_identifier)
+    puts("+++++++get_expected_rmrepo_path++++++++")    
+    s = Setting.find_by_name("plugin_cosmosys_git")
+    if (s != nil) then
+      if (s.value != nil) then
+        puts("The setting exists")
+        return s.value["repo_redmine_path"].gsub("%project_id%",prj_identifier)
+      else
+        puts("The setting value does not exist")
+      end
+    else
+      puts("The setting does not exist")
+    end
+    return nil
+  end
+
+  def update_create_repo_rm_mirror(remote_url)
+    puts("+++++++update_create_repo_rm_mirror++++++++")
+
+    ret = get_expected_rmrepo_path(@project.identifier)
+    if ret != nil then
+      path_folder = File.expand_path("..", ret)
+      if not(File.directory?(path_folder)) then
+        # Create it
+        FileUtils.mkdir_p path_folder
+      end
       if not(File.directory?(ret)) then
         # Create it
-        puts("Creating!: "+ret)
-        comando = "git clone --mirror #{repo_folder} #{ret}"
-        print("\n\n #{comando}")
+        comando = "cd #{path_folder}; git clone --mirror #{remote_url}"
+        puts("\n\n #{comando}")
         `#{comando}`
       else
-        comando = "cd #{ret}; git fetch"
-        print("\n\n #{comando}")
-        `#{comando}`
+        # Fetch it
+        comando = "cd #{ret}; git fetch --all"
+        puts("\n\n #{comando}")
+        `#{comando}`        
       end
-      puts("Folder: "+ret)
-    else
-      puts("Error, the setting does not exist")
     end
-    return ret    
+
+    return ret
   end
+
 
 
   def import_project_repo
@@ -260,7 +299,13 @@ class CosmosysGitController < ApplicationController
   def report_repo
   end
 
-  def export_project_repo(repo_folder,remoteurl)
+  def export_project_repo(repo_folder)
+    comando = "cd #{repo_folder}; git pull origin master"
+    puts("\n\n #{comando}")
+    `#{comando}`       
+    comando = "cd #{repo_folder}; date > file.txt"
+    puts("\n\n #{comando}")
+    `#{comando}`       
     return true
   end
 
