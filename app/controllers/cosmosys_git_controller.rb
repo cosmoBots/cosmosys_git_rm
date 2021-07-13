@@ -286,6 +286,41 @@ class CosmosysGitController < ApplicationController
         puts("\n\n #{comando}")
         `#{comando}`        
       end
+      rs = @project.repositories
+      foundrepo = false
+      rs.each {|r|
+        if foundrepo == false then
+          if (r.identifier = "csys") then
+            foundrepo = true
+            if (r.url != ret) then
+              r.url = ret
+              r.save
+            end
+          end
+        end
+      }
+      if foundrepo == false then
+        r = Repository::Git.new
+        r.project = @project
+        r.identifier = "csys"
+        r.report_last_commit = true
+        r.url = ret
+        r.is_default = true
+        r.save
+      end
+      
+=begin
+      {"utf8"=>"✓", 
+      "repository_scm"=>"Git", 
+      "repository"=>
+        {"is_default"=>"1", 
+        "identifier"=>"csys", 
+        "url"=>"/home/redmine/gitbase/csys_rm/proyecto.git", 
+        "path_encoding"=>"", 
+        "report_last_commit"=>"1"}, 
+        "commit"=>"Create", 
+        "project_id"=>"proyecto"}
+=end
     end
 
     return ret
