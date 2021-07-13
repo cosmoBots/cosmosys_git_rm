@@ -14,16 +14,19 @@ Redmine::Plugin.register :cosmosys_git do
   menu :project_menu, :cosmosys_git, {:controller => 'cosmosys_git', :action => 'menu' }, :caption => 'cosmoSysGit', :after => :activity, :param => :id
 
   settings :default => {
-    'repo_local_path' => "/home/redmine/gitbase/csys/%project_id%",
-    'repo_server_sync' => :false,
-    'repo_server_path'  => "ssh://git@gitlab/cosmobots/%project_id%.git",
-    'repo_template_id'  => 'template',
-    'repo_redmine_path' => "/home/redmine/gitbase/csys_rm/%project_id%.git",
-    'repo_redmine_sync' => :true,
-    'relative_uploadfile_path' => "uploading/csysUpload.ods",
-    'relative_downloadfile_path' => "downloading/csysDownload.ods",
-    'relative_reporting_path' => "reporting",
-    'relative_img_path' => "reporting/doc/img"
-  }, :partial => 'settings/cosmosys_git_settings'
+    "repo_server_sync"=> true, 
+    "repo_local_path"=>"/home/redmine/gitbase/csys/%project_id%", 
+    "repo_server_path"=>"ssh://git@gitlab/cosmobots/%project_id%.git",
+    "repo_template_id" => "template",
+    "repo_redmine_sync" => true,
+    "repo_redmine_path" => "/home/redmine/gitbase/csys_rm/%project_id%.git",
+    "import_path" => "01_importing/csysImport.ods",
+    "import_template_path" => "01_importing/csysImportTemplate.ods",
+    "export_file_path" => "02_exporting/csysExport.ods",
+    "export_file_path" => "02_exporting/csysExportTemplate.ods",
+    "reporting_template_path" => "03_reporting/01_templates",
+    "reporting_path" => "03_reporting/02_doc",
+    "reporting_img_path" => "03_reporting/03_img"
+    }, :partial => 'settings/cosmosys_git_settings'
 
 end
