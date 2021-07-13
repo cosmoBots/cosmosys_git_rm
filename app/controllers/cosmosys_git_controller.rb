@@ -35,8 +35,8 @@ class CosmosysGitController < ApplicationController
       returnmessage = ""
       repo_folder,remoteurl = update_create_repo_folder()
       if repo_folder != nil then
-        ret = export_project_repo(repo_folder)
-        if (ret) then
+        retvalue = export_project_repo(repo_folder)
+        if (retvalue) then
           ret = commit_push_project_repo(repo_folder)
           if (ret) then
             rm_mirror_folder = update_create_repo_rm_mirror(remoteurl)
@@ -306,21 +306,9 @@ class CosmosysGitController < ApplicationController
         r.report_last_commit = true
         r.url = ret
         r.is_default = true
+        r.path_encoding = "UTF-8"
         r.save
       end
-      
-=begin
-      {"utf8"=>"✓", 
-      "repository_scm"=>"Git", 
-      "repository"=>
-        {"is_default"=>"1", 
-        "identifier"=>"csys", 
-        "url"=>"/home/redmine/gitbase/csys_rm/proyecto.git", 
-        "path_encoding"=>"", 
-        "report_last_commit"=>"1"}, 
-        "commit"=>"Create", 
-        "project_id"=>"proyecto"}
-=end
     end
 
     return ret
@@ -334,14 +322,155 @@ class CosmosysGitController < ApplicationController
   def report_repo
   end
 
-  def export_project_repo(repo_folder)
-    comando = "cd #{repo_folder}; git pull origin master"
-    puts("\n\n #{comando}")
-    `#{comando}`       
-    comando = "cd #{repo_folder}; date > file.txt"
-    puts("\n\n #{comando}")
-    `#{comando}`       
-    return true
-  end
+  require 'rspreadsheet'
 
+  # Definitions of the cells in the "Dict" sheet of the export file
+  @@rmserverurlcell = [1,2] #B1
+  @@rmkeycell = [2,2] #B2
+  @@rmprojectidcell = [3,2] #B3
+  @@dictlistfirstrow = 2
+  @@teamcolumn = 5 #E
+  @@versionscolumn = 6 #F
+  @@trackerscolumn = 7 #G
+  @@statusescolumn = 8 #H
+  
+  # Definitions of the cells in the "Items" sheet of the export file
+  @@issuesfirstrow = 2
+  @@rmidcolumn = 1 #A 
+  @@localidcolumn = 4 #D
+  @@trackercolumn = 5 #E
+  @@subjectcolumn = 7 #G
+  @@itemstatuscolumn = 8 #H
+  @@itemparentcolumn = 9 #I
+  @@dependencescolumn = 10 #J
+  @@hourscolumn = 14 #K
+  @@assigneecolumn = 17 #Q
+  @@descriptioncolumn = 19 #S
+
+  def export_project_repo(repo_folder)
+    s = Setting.find_by_name("plugin_cosmosys_git")
+    if (s != nil) then
+      if (s.value != nil) then
+        s3 = s.value["export_path"]
+        if (s3 != nil) then
+          s3 = File.join(repo_folder, s3)
+          s4 = s.value["export_template_path"]
+          if (s4 != nil) then
+            s4 = File.join(repo_folder, s4)
+            # We update the repository before executin the export
+            comando = "cd #{repo_folder}; git pull origin master"
+            puts("\n\n #{comando}")
+            `#{comando}`
+
+            if (File.file?(s4)) then
+              # We copy the template over the last export file
+              comando = "cp #{s4} #{s3}"
+              puts("\n\n #{comando}")              
+              `#{comando}`
+              if (File.file?(s3)) then
+                book = Rspreadsheet.open(s3)
+                if (book != nil) then
+                  dictsheet = book.worksheets('Dict')
+                  if (dictsheet != nil) then
+                    issuessheet = book.worksheets('Items')
+                    if (issuessheet != nil) then
+                      # Data in the DictSheet
+                      dictsheet.cell(@@rmserverurlcell[0],@@rmserverurlcell[1]).value = "http://localhost:3001"
+                      dictsheet.cell(@@rmkeycell[0],@@rmkeycell[1]).value = "my API Key?"
+                      dictsheet.cell(@@rmprojectidcell[0],@@rmprojectidcell[1]).value = @project.identifier
+                      currentrow = @@dictlistfirstrow
+                      Tracker.all.each{|t|
+                        dictsheet.cell(currentrow,@@trackerscolumn).value = t.name
+                        currentrow += 1
+                      }
+                      currentrow = @@dictlistfirstrow
+                      IssueStatus.all.each{|s|
+                        dictsheet.cell(currentrow,@@itemstatuscolumn).value = s.name
+                        currentrow += 1
+                      }
+                      currentrow = @@dictlistfirstrow
+                      @project.members.each {|m|
+                        dictsheet.cell(currentrow,@@teamcolumn).value = m.user.login
+                        currentrow += 1
+                      }
+                      currentrow = @@dictlistfirstrow
+                      @project.versions.each {|v|
+                        dictsheet.cell(currentrow,@@versionscolumn).value = v.name
+                        currentrow += 1
+                      }
+                      # Data in the IssuesSheet
+                      currentrow = @@issuesfirstrow
+                      @project.issues.each{|i|
+                        issuessheet.cell(currentrow,@@rmidcolumn).value = i.id
+                        issuessheet.cell(currentrow,@@trackercolumn).value = i.tracker.name
+                        issuessheet.cell(currentrow,@@subjectcolumn).value = i.subject
+                        issuessheet.cell(currentrow,@@itemstatuscolumn).value = i.status.name
+                        if (i.assigned_to) then
+                          issuessheet.cell(currentrow,@@assigneecolumn).value = i.assigned_to.login
+                        end
+                        if (i.description) then
+                          issuessheet.cell(currentrow,@@descriptioncolumn).value = i.description
+                        end
+                        if (i.parent) then
+                          issuessheet.cell(currentrow,@@itemparentcolumn).value = "#"+i.parent.id.to_s
+                        end
+                        if (i.estimated_hours) then
+                          puts(i.subject+": "+i.estimated_hours.to_s+"h")
+                          issuessheet.cell(currentrow,@@hourscolumn).value = i.estimated_hours
+                        end
+
+                        #Now we enumerate the relations where the issue is the destination
+                        rlsstr = nil
+                        rls = i.relations_to
+                        rls.each{|rl|
+                          if (rl.relation_type == "precedes") or (rl.relation_type == "blocks") then
+                            if rlsstr != nil then
+                              rlsstr += " "
+                            else
+                              rlsstr = ""
+                            end
+                            rlsstr += "#"+rl.issue_from_id.to_s
+                          end
+                        }
+                        if rlsstr != nil then
+                          issuessheet.cell(currentrow,@@dependencescolumn).value = rlsstr
+                        end
+                        currentrow += 1
+                      }
+                      ret = book.save
+                      if ret == false then
+                        puts("Could not save export file: ",s3)
+                      else
+                        return true
+                      end
+                    else
+                      puts("Could not access the 'Items' sheet of the export file: ",s3)
+                    end
+                  else
+                    puts("Could not access the 'Dict' sheet of the export file: ",s3)
+                  end
+                else
+                  puts("Could not open the book of the export file: ",s3)
+                end
+              else
+                puts("The export file could not be created: "+s3)
+              end
+            else
+              puts("The template file does not exist: "+s4)
+            end
+          else
+            puts("The setting for the template file does not exist: export_template_path")
+          end
+        else
+          puts("The setting for the exporting path does not exist: export_path")
+        end
+      else
+        puts("The setting value for the cosmosysGit plugin does not exist: plugin_cosmosys_git.value")        
+      end
+    else
+      puts("The setting entry for the cosmosysGit plugin does not exist: plugin_cosmosys_git")
+    end
+    return false
+  end
 end
+  

@@ -23,18 +23,32 @@
   <%= text_field_tag 'settings[repo_redmine_path]', @settings['repo_redmine_path'] %>
 </p>
 <p>
-  <label><%= "relative_uploadfile_path" %></label>
-  <%= text_field_tag 'settings[relative_uploadfile_path]', @settings['relative_uploadfile_path'] %>
+  <label><%= "import_path" %></label>
+  <%= text_field_tag 'settings[import_path]', @settings['import_path'] %>
 </p>
 <p>
-  <label><%= "relative_reporting_path" %></label>
-  <%= text_field_tag 'settings[relative_reporting_path]', @settings['relative_reporting_path'] %>
+  <label><%= "reporting_path" %></label>
+  <%= text_field_tag 'settings[reporting_path]', @settings['reporting_path'] %>
 </p>
 <p>
-  <label><%= "relative_img_path" %></label>
-  <%= text_field_tag 'settings[relative_img_path]', @settings['relative_img_path'] %>
+  <label><%= "reporting_img_path" %></label>
+  <%= text_field_tag 'settings[reporting_img_path]', @settings['reporting_img_path'] %>
 </p>
 <p>
-  <label><%= "relative_downloadfile_path" %></label>
-  <%= text_field_tag 'settings[relative_downloadfile_path]', @settings['relative_downloadfile_path'] %>
+  <label><%= "export_path" %></label>
+  <%= text_field_tag 'settings[export_path]', @settings['export_path'] %>
 </p>
+<p>
+  <label><%= "import_template_path" %></label>
+  <%= text_field_tag 'settings[import_template_path]', @settings['import_template_path'] %>
+</p>
+<p>
+  <label><%= "export_template_path" %></label>
+  <%= text_field_tag 'settings[export_template_path]', @settings['export_template_path'] %>
+</p>
+<p>
+  <label><%= "reporting_template_path" %></label>
+  <%= text_field_tag 'settings[reporting_template_path]', @settings['reporting_template_path'] %>
+</p>
+
+
