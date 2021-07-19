@@ -35,7 +35,7 @@ class CosmosysGitController < ApplicationController
       returnmessage = ""
       repo_folder,remoteurl = update_create_repo_folder()
       if repo_folder != nil then
-        retvalue = export_project_repo(repo_folder)
+        retvalue,retstr = export_project_repo(repo_folder)
         if (retvalue) then
           ret = commit_push_project_repo(repo_folder)
           if (ret) then
@@ -50,7 +50,7 @@ class CosmosysGitController < ApplicationController
             returnmessage += "Problems commiting/pushing the Git repo"
           end
         else
-          returnmessage += "Problems exporting the project to the Git repo"
+          returnmessage += retstr
         end
       end
       if (ret != nil) then 
@@ -333,19 +333,14 @@ class CosmosysGitController < ApplicationController
   @@versionscolumn = 6 #F
   @@trackerscolumn = 7 #G
   @@statusescolumn = 8 #H
+  @@prioritiescolumn = 9 #I
   
   # Definitions of the cells in the "Items" sheet of the export file
   @@issuesfirstrow = 2
-  @@rmidcolumn = 1 #A 
-  @@localidcolumn = 4 #D
-  @@trackercolumn = 5 #E
-  @@subjectcolumn = 7 #G
-  @@itemstatuscolumn = 8 #H
-  @@itemparentcolumn = 9 #I
-  @@dependencescolumn = 10 #J
-  @@hourscolumn = 14 #K
-  @@assigneecolumn = 17 #Q
-  @@descriptioncolumn = 19 #S
+
+  # Definitions of the cells in the "ExtraFields" sheet of the export file
+  @@issuesextrafirstrow = 2
+  @@extraheadersrow = 1
 
   def export_project_repo(repo_folder)
     s = Setting.find_by_name("plugin_cosmosys_git")
@@ -385,9 +380,14 @@ class CosmosysGitController < ApplicationController
                       }
                       currentrow = @@dictlistfirstrow
                       IssueStatus.all.each{|s|
-                        dictsheet.cell(currentrow,@@itemstatuscolumn).value = s.name
+                        dictsheet.cell(currentrow,@@statusescolumn).value = s.name
                         currentrow += 1
                       }
+                      currentrow = @@dictlistfirstrow
+                      IssuePriority.all.each{|s|
+                        dictsheet.cell(currentrow,@@prioritiescolumn).value = s.name
+                        currentrow += 1
+                      }                      
                       currentrow = @@dictlistfirstrow
                       @project.members.each {|m|
                         dictsheet.cell(currentrow,@@teamcolumn).value = m.user.login
@@ -398,79 +398,225 @@ class CosmosysGitController < ApplicationController
                         dictsheet.cell(currentrow,@@versionscolumn).value = v.name
                         currentrow += 1
                       }
+
+                      trackercolumn = nil
+                      subjectcolumn = nil
+                      itemstatuscolumn = nil
+                      rmidcolumn = nil
+                      localidcolumn = nil
+                      itemparentcolumn = nil
+                      descriptioncolumn = nil
+                      assigneecolumn = nil
+                      hourscolumn = nil
+                      precedencescolumn = nil
+                      blockingcolumn = nil
+
+                      index = 1
+                      issuessheet.row(1).cells.each{|i|
+                        if trackercolumn == nil and i.value == "tracker" then
+                          trackercolumn = index
+                        else
+                          if subjectcolumn == nil and i.value == "subject" then
+                            subjectcolumn = index
+                          else
+                            if itemstatuscolumn == nil and i.value == "status" then
+                              itemstatuscolumn = index
+                            else
+                              if rmidcolumn == nil and i.value == "RM#" then
+                                rmidcolumn = index
+                              else
+                                if localidcolumn == nil and i.value == "ID" then
+                                  localidcolumn = index
+                                else
+                                  if itemparentcolumn == nil and i.value == "parent" then
+                                    itemparentcolumn = index
+                                  else
+                                    if descriptioncolumn == nil and i.value == "description" then
+                                      descriptioncolumn = index
+                                    else
+                                      if assigneecolumn == nil and i.value == "assignee" then
+                                        assigneecolumn = index
+                                      else
+                                        if hourscolumn == nil and i.value == "estimated_hours" then
+                                          hourscolumn = index
+                                        else
+                                          if precedencescolumn == nil and i.value == "precedent_issues" then
+                                            precedencescolumn = index
+                                          else
+                                            if blockingcolumn == nil and i.value == "blocking_issues" then
+                                              blockingcolumn = index
+                                            else
+                                              
+                                            end     
+                                          end                                                  
+                                        end                                                
+                                      end                                                                     end                                         
+                                  end          
+                                end                                        
+                              end                              
+                            end
+                          end
+                        end
+                        index += 1
+                      }
+
                       # Data in the IssuesSheet
                       currentrow = @@issuesfirstrow
                       @project.issues.each{|i|
-                        issuessheet.cell(currentrow,@@rmidcolumn).value = i.id
-                        issuessheet.cell(currentrow,@@trackercolumn).value = i.tracker.name
-                        issuessheet.cell(currentrow,@@subjectcolumn).value = i.subject
-                        issuessheet.cell(currentrow,@@itemstatuscolumn).value = i.status.name
+                        issuessheet.cell(currentrow,rmidcolumn).value = i.id
+                        issuessheet.cell(currentrow,localidcolumn).value = i.identifier
+                        issuessheet.cell(currentrow,trackercolumn).value = i.tracker.name
+                        issuessheet.cell(currentrow,subjectcolumn).value = i.subject
+                        issuessheet.cell(currentrow,itemstatuscolumn).value = i.status.name
                         if (i.assigned_to) then
-                          issuessheet.cell(currentrow,@@assigneecolumn).value = i.assigned_to.login
+                          issuessheet.cell(currentrow,assigneecolumn).value = i.assigned_to.login
                         end
                         if (i.description) then
-                          issuessheet.cell(currentrow,@@descriptioncolumn).value = i.description
+                          issuessheet.cell(currentrow,descriptioncolumn).value = i.description
                         end
                         if (i.parent) then
-                          issuessheet.cell(currentrow,@@itemparentcolumn).value = "#"+i.parent.id.to_s
+                          #issuessheet.cell(currentrow,itemparentcolumn).value = "#"+i.parent.id.to_s
+                          issuessheet.cell(currentrow,itemparentcolumn).value = i.parent.identifier
                         end
                         if (i.estimated_hours) then
                           puts(i.subject+": "+i.estimated_hours.to_s+"h")
-                          issuessheet.cell(currentrow,@@hourscolumn).value = i.estimated_hours
+                          issuessheet.cell(currentrow,hourscolumn).value = i.estimated_hours
                         end
 
                         #Now we enumerate the relations where the issue is the destination
                         rlsstr = nil
+                        blkstr = nil
                         rls = i.relations_to
                         rls.each{|rl|
-                          if (rl.relation_type == "precedes") or (rl.relation_type == "blocks") then
+                          if (rl.relation_type == "precedes") then
                             if rlsstr != nil then
-                              rlsstr += " "
+                              rlsstr += ","
                             else
                               rlsstr = ""
                             end
-                            rlsstr += "#"+rl.issue_from_id.to_s
+                            #rlsstr += "#"+rl.issue_from_id.to_s
+                            rlsstr += rl.issue_from.identifier
+                          end
+                          if (rl.relation_type == "blocks") then
+                            if blkstr != nil then
+                              blkstr += ","
+                            else
+                              blkstr = ""
+                            end
+                            #blkstr += "#"+rl.issue_from_id.to_s
+                            blkstr += rl.issue_from.identifier
                           end
                         }
                         if rlsstr != nil then
-                          issuessheet.cell(currentrow,@@dependencescolumn).value = rlsstr
+                          issuessheet.cell(currentrow,precedencescolumn).value = rlsstr
                         end
+                        if blkstr != nil then
+                          issuessheet.cell(currentrow,blockingcolumn).value = blkstr
+                        end                        
                         currentrow += 1
                       }
+
+                      extrasheet = book.worksheets('ExtraFields')
+                      puts("+++++++EXTRA FIELDS++++++++++")
+                      if extrasheet != nil then
+                        columnindex = 1
+                        lastusedcolumn = 1
+                        dictcf = {}
+                        extrasheet.row(@@extraheadersrow).cells.each {|cf|
+                          if (cf.value != nil) then
+                            if (cf.value != "subject" and cf.value != "ID") then
+                              dictcf[cf.value] = columnindex
+                              lastusedcolumn = columnindex
+                            end
+                          end
+                          columnindex += 1
+                        }
+                        columnindex = lastusedcolumn + 1
+                        IssueCustomField.all.each{|cf|
+                          if (cf.name != "csWload" and cf.name != "csID") then
+                            if not dictcf.key?(cf.name) then
+                              dictcf[cf.name] = columnindex
+                              extrasheet.row(@@extraheadersrow).cell(columnindex).value = cf.name
+                              columnindex += 1
+                            end
+                          end
+                        }
+                        puts dictcf
+                        currentrow = @@issuesextrafirstrow
+                        if dictcf.key?('last_notes') then
+                          add_last_notes = true
+                          lastnotescolumn = dictcf['last_notes']
+
+                        else
+                          add_last_notes = false
+                        end
+                        @project.issues.each{|i|
+                          if (add_last_notes and (i.last_notes != nil)) then
+                            extrasheet.cell(currentrow,lastnotescolumn).value = i.last_notes
+                          end
+                          i.custom_values.each{|cv|
+                            columnindex = dictcf[cv.custom_field.name]
+                            if columnindex != nil then
+                              prevvalue = extrasheet.cell(currentrow,columnindex).value
+                              if (cv.custom_field.field_format == "float") then
+                                extrasheet.cell(currentrow,columnindex).value = cv.value.to_f
+                              else
+                                if (cv.custom_field.field_format == "user") then
+                                  if (cv.value != nil) then
+                                    userid = cv.value.to_i
+                                    if (userid > 0) then
+                                      u = User.find(cv.value.to_i)
+                                      if (prevvalue == nil) then
+                                        extrasheet.cell(currentrow,columnindex).value = u.login
+                                      else
+                                        extrasheet.cell(currentrow,columnindex).value = prevvalue + "," + u.login
+                                      end
+                                    end
+                                  end
+                                else
+                                  extrasheet.cell(currentrow,columnindex).value = cv.value
+                                end
+                              end
+                            end
+                          }
+                          currentrow += 1
+                        }
+                      end
+
                       ret = book.save
                       if ret == false then
-                        puts("Could not save export file: ",s3)
+                        retstr = "Could not save export file: "+s3
                       else
                         return true
                       end
                     else
-                      puts("Could not access the 'Items' sheet of the export file: ",s3)
+                      retstr = "Could not access the 'Items' sheet of the export file: "+s3
                     end
                   else
-                    puts("Could not access the 'Dict' sheet of the export file: ",s3)
+                    retstr = "Could not access the 'Dict' sheet of the export file: "+s3
                   end
                 else
-                  puts("Could not open the book of the export file: ",s3)
+                  retstr = "Could not open the book of the export file: "+s3
                 end
               else
-                puts("The export file could not be created: "+s3)
+                retstr = "The export file could not be created: "+s3
               end
             else
-              puts("The template file does not exist: "+s4)
+              retstr = "The template file does not exist: "+s4
             end
           else
-            puts("The setting for the template file does not exist: export_template_path")
+            retstr = "The setting for the template file does not exist: export_template_path"
           end
         else
-          puts("The setting for the exporting path does not exist: export_path")
+          retstr = "The setting for the exporting path does not exist: export_path"
         end
       else
-        puts("The setting value for the cosmosysGit plugin does not exist: plugin_cosmosys_git.value")        
+        retstr = "The setting value for the cosmosysGit plugin does not exist: plugin_cosmosys_git.value"
       end
     else
-      puts("The setting entry for the cosmosysGit plugin does not exist: plugin_cosmosys_git")
+      retstr = "The setting entry for the cosmosysGit plugin does not exist: plugin_cosmosys_git"
     end
-    return false
+    return false,retstr
   end
 end
   
