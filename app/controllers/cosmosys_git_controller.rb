@@ -372,8 +372,10 @@ class CosmosysGitController < ApplicationController
                       puts("+++++++EXTRA FIELDS++++++++++")
                       if extrasheet != nil then
 
-                        # DICT SHEET ###################3
-                        dictsheet.cell(@@rmserverurlcell[0],@@rmserverurlcell[1]).value = "http://localhost:3001"
+                        # DICT SHEET ###################
+                        s = Setting.find_by_name("host_name").value
+                        p = Setting.find_by_name("protocol").value
+                        dictsheet.cell(@@rmserverurlcell[0],@@rmserverurlcell[1]).value = p+"://"+s
                         dictsheet.cell(@@rmkeycell[0],@@rmkeycell[1]).value = "my API Key?"
                         dictsheet.cell(@@rmprojectidcell[0],@@rmprojectidcell[1]).value = @project.identifier
                         currentrow = @@dictlistfirstrow

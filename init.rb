@@ -6,7 +6,7 @@ Redmine::Plugin.register :cosmosys_git do
   url 'http://cosmobots.eu'
   author_url 'http://cosmobots.eu'  
 
-  #requires_redmine_plugin :cosmosys , :version_or_higher => '0.0.2'
+  requires_redmine_plugin :cosmosys , :version_or_higher => '0.0.2'
 
   permission :csys_git_menu, :cosmosys_git => :menu
   permission :csys_git_report, :cosmosys_git => :report
