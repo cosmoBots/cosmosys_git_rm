@@ -329,6 +329,7 @@ class CosmosysGitController < ApplicationController
   @@rmserverurlcell = [2,2] #B2
   @@rmkeycell = [3,2] #B3
   @@rmprojectidcell = [4,2] #B4
+  @@projectcodecell = [5,2] #B5
   @@teamcolumn = 5 #E
   @@versionscolumn = 6 #F
   @@trackerscolumn = 7 #G
@@ -429,6 +430,7 @@ class CosmosysGitController < ApplicationController
                         dictsheet.cell(@@rmserverurlcell[0],@@rmserverurlcell[1]).value = prot+"://"+s.value
                         dictsheet.cell(@@rmkeycell[0],@@rmkeycell[1]).value = "my API Key?"
                         dictsheet.cell(@@rmprojectidcell[0],@@rmprojectidcell[1]).value = @project.identifier
+                        dictsheet.cell(@@projectcodecell[0],@@projectcodecell[1]).value = @project.code
                         currentrow = @@dictlistfirstrow
                         Tracker.all.each{|t|
                           dictsheet.cell(currentrow,@@trackerscolumn).value = t.name
