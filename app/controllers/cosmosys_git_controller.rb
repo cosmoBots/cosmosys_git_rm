@@ -546,21 +546,21 @@ class CosmosysGitController < ApplicationController
                             end
                           }
                           if rlsstr != nil then
-                            thiskey = "precedent_issues"      
+                            thiskey = "precedent_items"      
                             if issuefieldlocation.key?(thiskey) then
                               sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
                                 issuefieldlocation[thiskey][:column]).value = rlsstr
                             end
                           end
                           if blkstr != nil then
-                            thiskey = "blocking_issues"      
+                            thiskey = "blocking_items"      
                             if issuefieldlocation.key?(thiskey) then
                               sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
                                 issuefieldlocation[thiskey][:column]).value = blkstr
                             end
                           end
                           if relstr != nil then
-                            thiskey = "related_issues"      
+                            thiskey = "related_items"      
                             if issuefieldlocation.key?(thiskey) then
                               sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
                                 issuefieldlocation[thiskey][:column]).value = relstr
