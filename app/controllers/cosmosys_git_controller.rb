@@ -373,9 +373,60 @@ class CosmosysGitController < ApplicationController
                       if extrasheet != nil then
 
                         # DICT SHEET ###################
-                        s = Setting.find_by_name("host_name").value
-                        p = Setting.find_by_name("protocol").value
-                        dictsheet.cell(@@rmserverurlcell[0],@@rmserverurlcell[1]).value = p+"://"+s
+                        s = Setting.find_by_name("host_name")
+                        p = Setting.find_by_name("protocol")
+                        prot = nil
+                        if s == nil or p == nil then
+                          splitted_url = request.fullpath.split('/cosmosys_reqs')
+                          print("\nsplitted_url: ",splitted_url)
+                          root_url = splitted_url[0]
+                          print("\nroot_url: ",root_url)
+                          print("\nbase_url: ",request.base_url)
+                          print("\nurl: ",request.url)
+                          print("\noriginal: ",request.original_url)
+                          print("\nhost: ",request.host)
+                          print("\nhost wp: ",request.host_with_port)
+                          print("\nfiltered_path: ",request.filtered_path)
+                          print("\nfullpath: ",request.fullpath)
+                          print("\npath_translated: ",request.path_translated)
+                          print("\noriginal_fullpath ",request.original_fullpath)
+                          print("\nserver_name ",request.server_name)
+                          print("\noriginal_fullpath ",request.original_fullpath)
+                          print("\npath ",request.path)
+                          print("\nserver_addr ",request.server_addr)
+                          print("\nhost ",request.host)
+                          print("\nremote_host ",request.remote_host)
+
+                          if s == nil then
+                            s = Setting.new
+                            s.name = "host_name"
+                            s.value = request.host_with_port
+                            s.save
+                          end
+                          if p == nil then
+                            p = Setting.new
+                            p.name = "protocol"
+                            prot = request.protocol
+                            if prot == "http://" then
+                              p.value =  "http"
+                              prot = p.value                          
+                              p.save
+                            else
+                              if prot == "https://" then
+                                p.value = "https"
+                                prot = p.value                          
+                                p.save
+                              else
+                                puts "Unknown protocol "+prot+" can not save the Redmine setting"
+                              end
+                            end
+                          end
+                        else
+                          prot = p.value
+                        end
+
+
+                        dictsheet.cell(@@rmserverurlcell[0],@@rmserverurlcell[1]).value = prot+"://"+s.value
                         dictsheet.cell(@@rmkeycell[0],@@rmkeycell[1]).value = "my API Key?"
                         dictsheet.cell(@@rmprojectidcell[0],@@rmprojectidcell[1]).value = @project.identifier
                         currentrow = @@dictlistfirstrow
