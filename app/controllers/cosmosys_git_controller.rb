@@ -53,16 +53,25 @@ class CosmosysGitController < ApplicationController
   end
   
   def export
+    @export = (params[:export] || session[:export] || nil) 
+    if @export == nil then
+      @export = {}
+      @export['include_subprojects'] = true
+      @export['include_fields'] = false
+      @export['include_cfields'] = false
+    end
+    puts @export
     if request.get? then
-      print("export GET!!!!!")      
+      print("export GET!!!!!")
     else
       print("export POST!!!!!")
+      puts params
       ret = nil
       returnmessage = ""
       repo_folder,remoteurl = update_create_repo_folder()
       if repo_folder != nil then
         @project.cschapters_gen
-        retvalue,retstr = export_project_repo(repo_folder)
+        retvalue,retstr = export_project_repo(repo_folder,@export)
         if (retvalue) then
           ret = commit_push_project_repo(repo_folder)
           if (ret) then
@@ -88,6 +97,7 @@ class CosmosysGitController < ApplicationController
         flash[:error] = returnmessage
       end
     end
+    session[:export] = @export
   end
 
   def report
@@ -806,7 +816,7 @@ class CosmosysGitController < ApplicationController
     return ret,retstr
   end
 
-  def export_project_repo(repo_folder)
+  def export_project_repo(repo_folder,export_preferences)
     s = Setting.find_by_name("plugin_cosmosys_git")
     if (s != nil) then
       if (s.value != nil) then
@@ -954,18 +964,135 @@ class CosmosysGitController < ApplicationController
                           index += 1
                         }
 
+                        include_precedent = issuefieldlocation.key?("precedent_items")
+                        include_blocking = issuefieldlocation.key?("blocking_items")
+                        include_related = issuefieldlocation.key?("related_items")
+                        
+                        if export_preferences['include_fields'] then
+                          thiskey = "RM#"
+                          if issuefieldlocation.key?(thiskey) then
+                            location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                            issuefieldlocation[thiskey] = location
+                            lastextrausedcolumn += 1
+                            extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
+                          end
+                          thiskey = "ID"
+                          if issuefieldlocation.key?(thiskey) then
+                            location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                            issuefieldlocation[thiskey] = location
+                            lastextrausedcolumn += 1
+                            extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
+                          end                          
+                          thiskey = "tracker"
+                          if issuefieldlocation.key?(thiskey) then
+                            location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                            issuefieldlocation[thiskey] = location
+                            lastextrausedcolumn += 1
+                            extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
+                          end
+                          thiskey = "subject"      
+                          if issuefieldlocation.key?(thiskey) then
+                            location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                            issuefieldlocation[thiskey] = location
+                            lastextrausedcolumn += 1
+                            extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
+                          end              
+                          thiskey = "status"
+                          if issuefieldlocation.key?(thiskey) then
+                            location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                            issuefieldlocation[thiskey] = location
+                            lastextrausedcolumn += 1
+                            extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
+                          end
+                          thiskey = "assignee"      
+                          if issuefieldlocation.key?(thiskey) then
+                            location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                            issuefieldlocation[thiskey] = location
+                            lastextrausedcolumn += 1
+                            extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
+                          end
+                          thiskey = "description"      
+                          if issuefieldlocation.key?(thiskey) then
+                            location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                            issuefieldlocation[thiskey] = location
+                            lastextrausedcolumn += 1
+                            extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
+                          end
+                          thiskey = "parent"      
+                          if issuefieldlocation.key?(thiskey) then
+                            location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                            issuefieldlocation[thiskey] = location
+                            lastextrausedcolumn += 1
+                            extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
+                          end
+
+                          thiskey = "estimated_hours"
+                          if issuefieldlocation.key?(thiskey) then
+                            location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                            issuefieldlocation[thiskey] = location
+                            lastextrausedcolumn += 1
+                            extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
+                          end
+
+                          thiskey = "start_date"
+                          if issuefieldlocation.key?(thiskey) then
+                            location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                            issuefieldlocation[thiskey] = location
+                            lastextrausedcolumn += 1
+                            extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
+                          end
+
+                          thiskey = "due_date"
+                          if issuefieldlocation.key?(thiskey) then
+                            location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                            issuefieldlocation[thiskey] = location
+                            lastextrausedcolumn += 1
+                            extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
+                          end            
+
+                          if not include_precedent then
+                            thiskey = "precedent_items"
+                            location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                            issuefieldlocation[thiskey] = location
+                            lastextrausedcolumn += 1
+                            extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
+                            include_precedent = true
+                          end
+
+                          if not include_blocking then
+                            thiskey = "blocking_items"
+                            location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                            issuefieldlocation[thiskey] = location
+                            lastextrausedcolumn += 1
+                            extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
+                            include_blocking = true
+                          end
+
+                          if not include_related then
+                            thiskey = "related_items"
+                            location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                            issuefieldlocation[thiskey] = location
+                            lastextrausedcolumn += 1
+                            extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
+                            include_related = true
+                          end
+                        end
+
                         # Extra custom fields not in the template, to be appended as columns in the extrafields
                         # sheet
-                        IssueCustomField.all.each{|cf|
-                          if not issuefieldlocation.key?(cf.name) then
-                            location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
-                            issuefieldlocation[cf.name] = location
-                            lastextrausedcolumn += 1
-                            extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = cf.name
-                          end
-                        }
+                        if export_preferences['include_cfields'] != nil and export_preferences['include_cfields'] then
+                          IssueCustomField.all.each{|cf|
+                            if not issuefieldlocation.key?(cf.name) then
+                              location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                              issuefieldlocation[cf.name] = location
+                              lastextrausedcolumn += 1
+                              extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = cf.name
+                            end
+                          }
+                        end
                         puts("++++++ LOCATION +++++++++")
                         puts(issuefieldlocation)
+
 
                         # Normal Issue fields
                         currentrow = @@issuesfirstrow
@@ -1034,8 +1161,9 @@ class CosmosysGitController < ApplicationController
                           blkstr = nil
                           relstr = nil
                           rls = i.relations_to
-                          rls.each{|rl|
-                            if (rl.relation_type == "precedes") then
+                          
+                          rls.each{|rl|                          
+                            if include_precedent and (rl.relation_type == "precedes") then
                               if rlsstr != nil then
                                 rlsstr += ","
                               else
@@ -1043,7 +1171,7 @@ class CosmosysGitController < ApplicationController
                               end
                               rlsstr += rl.issue_from.identifier
                             end
-                            if (rl.relation_type == "blocks") then
+                            if include_blocking and (rl.relation_type == "blocks") then
                               if blkstr != nil then
                                 blkstr += ","
                               else
@@ -1051,7 +1179,7 @@ class CosmosysGitController < ApplicationController
                               end
                               blkstr += rl.issue_from.identifier
                             end
-                            if (rl.relation_type == "relates") then
+                            if include_related and (rl.relation_type == "relates") then
                               if relstr != nil then
                                 relstr += ","
                               else
@@ -1060,26 +1188,17 @@ class CosmosysGitController < ApplicationController
                               relstr += rl.issue_from.identifier
                             end
                           }
-                          if rlsstr != nil then
-                            thiskey = "precedent_items"      
-                            if issuefieldlocation.key?(thiskey) then
-                              sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                issuefieldlocation[thiskey][:column]).value = rlsstr
-                            end
+                          if include_precedent and rlsstr != nil then 
+                              sheetindexes[issuefieldlocation["precedent_items"][:sheet]].cell(currentrow,
+                                issuefieldlocation["precedent_items"][:column]).value = rlsstr
                           end
-                          if blkstr != nil then
-                            thiskey = "blocking_items"      
-                            if issuefieldlocation.key?(thiskey) then
-                              sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                issuefieldlocation[thiskey][:column]).value = blkstr
-                            end
+                          if include_blocking and blkstr != nil then
+                              sheetindexes[issuefieldlocation["blocking_items"][:sheet]].cell(currentrow,
+                                issuefieldlocation["blocking_items"][:column]).value = blkstr
                           end
-                          if relstr != nil then
-                            thiskey = "related_items"      
-                            if issuefieldlocation.key?(thiskey) then
-                              sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                issuefieldlocation[thiskey][:column]).value = relstr
-                            end
+                          if include_related and relstr != nil then
+                              sheetindexes[issuefieldlocation["related_items"][:sheet]].cell(currentrow,
+                                issuefieldlocation["related_items"][:column]).value = relstr
                           end
                           if (i.last_notes != nil) then
                             thiskey = "last_notes"

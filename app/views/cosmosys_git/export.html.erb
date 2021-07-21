@@ -1,6 +1,19 @@
 <h2>CosmosysGitController#export</h2>
 
 <p>THIS WILL OVERWRITE THE DOWNLOAD FILE AT REPO.</p>
+
 <%= form_tag({:controller => 'cosmosys_git', :action => 'export'}, :class => "tabular", :multipart => true) do %>
+<p>
+  <label><%= "Include all the normal fields available" %> </label>
+  <%= check_box_tag 'export[include_fields]', 1, @export['include_fields'] %>
+</p>
+<p>
+  <label><%= "Include all the custom fields available" %> </label>
+  <%= check_box_tag 'export[include_cfields]', 1, @export['include_cfields'] %>
+</p>
+<p>
+  <label><%= "Include subprojects" %> </label>
+  <%= check_box_tag 'export[include_subprojects]', 1, @export['include_subprojects'] %>
+</p>
 <%= submit_tag l(:button_export) %>
 <% end %>
