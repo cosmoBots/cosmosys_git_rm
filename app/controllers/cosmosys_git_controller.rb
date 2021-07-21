@@ -385,7 +385,7 @@ class CosmosysGitController < ApplicationController
   @@issuesheadersrow = 1
 
   def import_project_repo(repo_folder)
-    ret = false
+    retvalue = false
     s = Setting.find_by_name("plugin_cosmosys_git")
     if (s != nil) then
       if (s.value != nil) then
@@ -559,13 +559,15 @@ class CosmosysGitController < ApplicationController
                                       thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
                                         issuefieldlocation[thiskey][:column])
                                       if thisfield != nil then 
-                                        thisvalue = thisfield.value
-                                        if thisvalue != nil then
-                                          thisitem = @project.csys.find_issue_by_identifier(thisvalue)
+                                        thisident = thisfield.value
+                                        if thisident != nil then
+                                          thisitem = @project.csys.find_issue_by_identifier(thisident)
                                           if (thisitem == nil) then
+                                            puts("NO LO ENCONTRAMOS!!!!"+thisident)
                                             thisitem = @project.issues.new
                                           end
-                                          dictitems[thisvalue] = thisitem
+                                          dictitems[thisident] = {}
+                                          dictitems[thisident]['item'] = thisitem
                                         else
                                           puts("the row ",currentrow," does not have an ID")
                                         end
@@ -573,220 +575,334 @@ class CosmosysGitController < ApplicationController
                                     end
 
                                     if thisitem != nil then
+                                      retvalue = true
+
                                       thiskey = "tracker"
-                                      if issuefieldlocation.key?(thiskey) then
-                                        thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                          issuefieldlocation[thiskey][:column])
-                                        if thisfield != nil then 
-                                          thisvalue = thisfield.value
-                                          if thisvalue != nil then
-                                            thistracker = Tracker.find_by_name(thisvalue)
-                                            if (thistracker != nil) then
-                                              thisitem.tracker = thistracker
-                                            else
-                                              puts("the tracker ",thisvalue," does not exist")
-                                            end
-                                          else
-                                            puts("the row ",currentrow," does not have a tracker value")
-                                          end
+                                      ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
+                                      if ret != nil then
+                                        thistracker = Tracker.find_by_name(ret)
+                                        if (thistracker != nil) then
+                                          thisitem.tracker = thistracker
                                         else
-                                          puts("the row ",currentrow," does not have a tracker field")                                    
+                                          puts("the tracker ",thisvalue," does not exist")
                                         end
                                       end
 
                                       thiskey = "subject"
-                                      if issuefieldlocation.key?(thiskey) then
-                                        thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                          issuefieldlocation[thiskey][:column])
-                                        if thisfield != nil then 
-                                          thisvalue = thisfield.value
-                                          if thisvalue != nil then
-                                              thisitem.subject = thisvalue
-                                          else
-                                            puts("the row ",currentrow," does not have a subject value")
-                                          end
+                                      ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
+                                      if ret != nil then
+                                        thisitem.subject = ret
+                                      end                                      
+
+                                      thiskey = "status"
+                                      ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
+                                      if ret != nil then
+                                        thisstatus = IssueStatus.find_by_name(ret)
+                                        if (thisstatus != nil) then
+                                          thisitem.status = thisstatus
                                         else
-                                          puts("the row ",currentrow," does not have a subject field")                                    
+                                          puts("the status ",ret," does not exist")
                                         end
-                                      end
+                                      end                                        
 
-                                      if thisitem != nil then
-                                        thiskey = "status"
-                                        if issuefieldlocation.key?(thiskey) then
-                                          thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                            issuefieldlocation[thiskey][:column])
-                                          if thisfield != nil then 
-                                            thisvalue = thisfield.value
-                                            if thisvalue != nil then
-                                              thisstatus = IssueStatus.find_by_name(thisvalue)
-                                              if (thisstatus != nil) then
-                                                thisitem.status = thisstatus
-                                              else
-                                                puts("the status ",thisvalue," does not exist")
-                                              end
-                                            else
-                                              puts("the row ",currentrow," does not have a status value")
-                                            end
-                                          else
-                                            puts("the row ",currentrow," does not have a status field")                                    
-                                          end
+                                      thiskey = "assignee"
+                                      ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
+                                      if ret != nil then
+                                        thismember = dictmembers[ret]
+                                        if (thismember != nil) then
+                                          thisitem.assigned_to = thismember.user
+                                        else
+                                          puts("the project team member ",ret," does not exist")
                                         end
-                                      end
-
-                                      if thisitem != nil then
-                                        thiskey = "assignee"
-                                        if issuefieldlocation.key?(thiskey) then
-                                          thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                            issuefieldlocation[thiskey][:column])
-                                          if thisfield != nil then 
-                                            thisvalue = thisfield.value
-                                            if thisvalue != nil then
-                                              thismember = dictmembers[thisvalue]
-                                              if (thismember != nil) then
-                                                thisitem.assigned_to = thismember.user
-                                              else
-                                                puts("the project team member ",thisvalue," does not exist")
-                                              end
-                                            else
-                                              puts("the row ",currentrow," does not have a assignee value")
-                                            end
-                                          else
-                                            puts("the row ",currentrow," does not have a assignee field")                                    
-                                          end
-                                        end
-                                      end
+                                      end                                        
 
                                       thiskey = "description"
-                                      if issuefieldlocation.key?(thiskey) then
-                                        thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                          issuefieldlocation[thiskey][:column])
-                                        if thisfield != nil then 
-                                          thisvalue = thisfield.value
-                                          if thisvalue != nil then
-                                              thisitem.description = thisvalue
-                                          else
-                                            puts("the row ",currentrow," does not have a description value")
-                                          end
-                                        else
-                                          puts("the row ",currentrow," does not have a description field")                                    
-                                        end
+                                      ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
+                                      if ret != nil then
+                                        thisitem.description = ret
                                       end
-
-                                      if thisitem != nil then
-                                        thiskey = "parent"
-                                        if issuefieldlocation.key?(thiskey) then
-                                          thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                            issuefieldlocation[thiskey][:column])
-                                          if thisfield != nil then 
-                                            thisvalue = thisfield.value
-                                            if thisvalue != nil then
-                                              thisparentitem = dictitems[thisvalue]
-                                              if (thisparentitem == nil) then
-                                                thisparentitem = @project.csys.find_issue_by_identifier(thisvalue)
-                                              end
-                                              if (thisparentitem != nil) then
-                                                thisitem.parent = thisparentitem
-                                              else
-                                                puts("the parent issue ",thisvalue," does not exist")
-                                              end
-                                            else
-                                              puts("the row ",currentrow," does not have a parent value")
-                                            end
-                                          else
-                                            puts("the row ",currentrow," does not have a parent field")                                    
-                                          end
-                                        end
-                                      end
-        
+       
                                       thiskey = "estimated_hours"
-                                      if issuefieldlocation.key?(thiskey) then
-                                        thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                          issuefieldlocation[thiskey][:column])
-                                        if thisfield != nil then 
-                                          thisvalue = thisfield.value
-                                          if thisvalue != nil then
-                                              thisitem.estimated_hours = thisvalue
-                                          else
-                                            puts("the row ",currentrow," does not have a estimated_hours value")
-                                          end
-                                        else
-                                          puts("the row ",currentrow," does not have a estimated_hours field")                                    
-                                        end
-                                      end
+                                      ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
+                                      if ret != nil then
+                                        thisitem.estimated_hours = ret
+                                      end                                      
 
                                       thiskey = "start_date"
-                                      if issuefieldlocation.key?(thiskey) then
-                                        thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                          issuefieldlocation[thiskey][:column])
-                                        if thisfield != nil then 
-                                          thisvalue = thisfield.value
-                                          if thisvalue != nil then
-                                              thisitem.start_date = thisvalue
-                                          else
-                                            puts("the row ",currentrow," does not have a start_date value")
-                                          end
-                                        else
-                                          puts("the row ",currentrow," does not have a start_date field")                                    
-                                        end
+                                      ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
+                                      if ret != nil then
+                                        thisitem.start_date = ret
                                       end
 
                                       thiskey = "due_date"
-                                      if issuefieldlocation.key?(thiskey) then
-                                        thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                          issuefieldlocation[thiskey][:column])
-                                        if thisfield != nil then 
-                                          thisvalue = thisfield.value
-                                          if thisvalue != nil then
-                                              thisitem.due_date = thisvalue
-                                          else
-                                            puts("the row ",currentrow," does not have a due_date value")
-                                          end
-                                        else
-                                          puts("the row ",currentrow," does not have a due_date field")                                    
+                                      ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
+                                      if ret != nil then
+                                        thisitem.due_date = ret
+                                      end                                      
+
+                                      IssueCustomField.all.each { |cf|
+                                        thiskey = cf.name
+                                        puts("++++ PROCESANDO++++ "+thiskey)
+                                        ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
+                                        if ret != nil then
+                                            cfty = thisitem.custom_field_values.select{|a| a.custom_field_id == cf.id }.first
+                                            cfty.value = ret
                                         end
+                                      }
+
+                                      puts("Let's save the item")
+                                      if (thisitem != nil) then
+                                        if thisitem.author == nil then
+                                          thisitem.author = User.current
+                                        end
+                                        puts(thisitem.inspect)
+                                        saved = thisitem.save
+                                        puts thisitem.errors.full_messages                                
+                                        puts("grabamos",saved)
+                                        retvalue = retvalue and saved
+                                      end
+
+                                      # Now we will obtain the relationships, so in a second loop we can add the relationships
+                                      thiskey = "parent"
+                                      # It is important to know if the parent column exists, in order to know if we have to remove 
+                                      # parent relationships
+                                      if issuefieldlocation[thiskey] then
+                                        ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
+                                        if ret != nil then
+                                          dictitems[thisident]['parent'] = ret
+                                        end
+                                      end
+                                      thiskey = 'precedent_items'
+                                      ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
+                                      if ret != nil then
+                                        dictitems[thisident][thiskey] = ret
+                                      end
+
+                                      thiskey = 'blocking_items'
+                                      ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
+                                      if ret != nil then
+                                        dictitems[thisident][thiskey] = ret
+                                      end
+
+                                      thiskey = 'related_items'
+                                      ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
+                                      if ret != nil then
+                                        dictitems[thisident][thiskey] = ret
                                       end
                                     end
-
-                                    IssueCustomField.all.each { |cf|
-                                      thiskey = cf.name
-                                      if issuefieldlocation.key?(thiskey) then
-                                        thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                          issuefieldlocation[thiskey][:column])
-                                        if thisfield != nil then 
-                                          thisvalue = thisfield.value
-                                          if thisvalue != nil then
-                                              cv = thisitem.custom_values.new
-                                              cv.value = thisvalue
-                                              cv.custom_field = cf
-                                              puts("the row "+currentrow.to_s+" have a "+cf.name+" value: "+thisvalue)  
-                                          else
-                                            puts("the row "+currentrow.to_s+" does not have a "+cf.name+" value")
-                                          end
-                                        else
-                                          puts("the row "+currentrow.to_s+" does not have a "+cf.name+" field")                                  
-                                        end
-                                      end                                
-                                    }
-
-
-                                    puts("vamos con la grabación")
-                                    if (thisitem != nil) then
-                                      if thisitem.author == nil then
-                                        thisitem.author = User.current
-                                      end
-                                      puts(thisitem.inspect)
-                                      saved = thisitem.save
-                                      puts thisitem.errors.full_messages                                
-                                      puts("grabamos",saved)
-                                      ret = saved
+                                    thisextrarow = extrasheet.row(currentrow)
+                                    if thisextrarow != nil then
+                                      # TODO: Import data from the ExtraFields sheet
                                     end
                                   end
-                                  thisextrarow = extrasheet.row(currentrow)
-                                  if thisextrarow != nil then
-                                  end                            
                                   currentrow += 1
                                   puts("next row",currentrow)
                                 end
+                                dictitems.each{|key,node|
+                                  changeditem = false
+                                  thisitem = node['item']
+                                  puts("EXPLORING RELATIONSHIPS OF " + key +" "+ thisitem.identifier)
+                                  puts(node)
+
+                                  relations_to_add = []
+                                  # Parent item
+
+                                  if issuefieldlocation["parent"] then
+                                      parentid = node['parent']
+                                    if (parentid != nil and parentid.size > 0) then
+                                      thisparentitem = dictitems[parentid]['item']
+                                      if (thisparentitem == nil) then
+                                        thisparentitem = @project.csys.find_issue_by_identifier(parentid)
+                                      end
+                                      if (thisparentitem != nil) then
+                                        if thisitem.parent != thisparentitem then
+                                          relations_to_add += [{:type => 'parent', :item_from => thisparentitem}]
+                                        end
+                                      else
+                                        puts("the parent issue ",parentid," does not exist")
+                                      end
+                                    else
+                                      # The column exists, and it is void.
+                                      # If it exists, we have to remove the parent relationship
+                                      thisitem.parent = nil
+                                    end
+                                  end
+
+                                  # Exploramos ahora las relaciones de dependencia
+                                  # Busco las relaciones existences con este requisito
+                                  # Como voy a tratar las que tienen el requisito como destino, las filtro
+                                  my_filtered_req_relations = thisitem.relations_to
+                                  # Al cargar requisitos puede ser que haya antiguas relaciones que ya no existan.  Al finalizar la carga
+                                  # deberemos eliminar los remanentes, asi que meteremos la lista de relaciones en una lista de remanentes
+                                  residual_relations = [] 
+                                  my_filtered_req_relations.each { |e|
+                                    residual_relations << e
+                                  }
+
+                                  if issuefieldlocation["blocking_items"] then
+                                    # Blocking items
+                                    rel_str = node['blocking_items']
+                                    if rel_str != nil then
+                                      related_req = node['blocking_items'].split(',')
+                                      related_req.each { |rreq|
+                                        rreq = rreq.strip()
+                                        #print("\n  related to: '"+rreq+"'")
+                                        # Busco ese requisito
+                                        blocking_req = @project.csys.find_issue_by_identifier(rreq)
+                                        if (blocking_req != nil) then
+                                          #print(" encontrado ",blocking_req.id)
+                                          # Veo si ya existe algun tipo de relacion con el
+                                          preexistent_relations = thisitem.relations_to.where(issue_from: blocking_req)
+                                          #print(preexistent_relations)
+                                          already_exists = false
+                                          if (preexistent_relations.size>0) then
+                                            preexistent_relations.each { |rel|
+                                              if (rel.relation_type == 'blocks') then
+                                                #print("Ya existe la relacion ",rel)
+                                                residual_relations.delete(rel)
+                                                already_exists = true
+                                              end
+                                            }
+                                          end
+                                          if not(already_exists) then
+                                            relations_to_add += [{:type => 'blocks', :item_from => blocking_req}]
+                                          end
+                                        else
+                                          print("Error, no existe el requisito bloqueante"+rreq)
+                                        end
+                                      }
+                                    end
+                                  end
+
+                                  if issuefieldlocation["precedent_items"] then
+                                    # Precedent items
+                                    rel_str = node['precedent_items']
+                                    if rel_str != nil then
+                                      related_req = node['precedent_items'].split(',')
+                                      related_req.each { |rreq|
+                                        rreq = rreq.strip()
+                                        #print("\n  related to: '"+rreq+"'")
+                                        # Busco ese requisito
+                                        precedent_req = @project.csys.find_issue_by_identifier(rreq)
+                                        if (precedent_req != nil) then
+                                          #print(" encontrado ",precedent_req.id)
+                                          # Veo si ya existe algun tipo de relacion con el
+                                          preexistent_relations = thisitem.relations_to.where(issue_from: precedent_req)
+                                          #print(preexistent_relations)
+                                          already_exists = false
+                                          if (preexistent_relations.size>0) then
+                                            preexistent_relations.each { |rel|
+                                              if (rel.relation_type == 'precedes') then
+                                                #print("Ya existe la relacion ",rel)
+                                                residual_relations.delete(rel)
+                                                already_exists = true
+                                              end
+                                            }
+                                          end
+                                          if not(already_exists) then
+                                            relations_to_add += [{:type => 'precedes', :item_from => precedent_req}]
+                                          end
+                                        else
+                                          print("Error, no existe el requisito predecesor")
+                                        end
+                                      }
+                                    end
+                                  end
+
+                                  if issuefieldlocation["related_items"] then
+                                    # Related items
+                                    rel_str = node['related_items']
+                                    if rel_str != nil then
+                                      related_req = node['related_items'].split(',')
+                                      related_req.each { |rreq|
+                                        rreq = rreq.strip()
+                                        #print("\n  related to: '"+rreq+"'")
+                                        # Busco ese requisito
+                                        related_req = @project.csys.find_issue_by_identifier(rreq)
+                                        if (related_req != nil) then
+                                          #print(" encontrado ",related_req.id)
+                                          # Veo si ya existe algun tipo de relacion con el
+                                          preexistent_relations = thisitem.relations_to.where(issue_from: related_req)
+                                          #print(preexistent_relations)
+                                          already_exists = false
+                                          if (preexistent_relations.size>0) then
+                                            preexistent_relations.each { |rel|
+                                              if (rel.relation_type == 'relates') then
+                                                #print("Ya existe la relacion ",rel)
+                                                residual_relations.delete(rel)
+                                                already_exists = true
+                                              end
+                                            }
+                                          end
+                                          if not(already_exists) then
+                                            relations_to_add += [{:type => 'relates', :item_from => related_req}]
+                                          end
+                                        else
+                                          print("Error, no existe el requisito relacionado")
+                                        end
+                                      }
+                                    end
+                                  end
+
+                                  # Hay que eliminar todas las relaciones preexistentes que no hayan sido "reescritas"
+                                  #print("residual_relations AFTER",residual_relations)
+                                  residual_relations.each { |r|
+                                      #print("Destruyo la relacion", r)
+                                      removeit = false
+                                      if issuefieldlocation["blocking_items"] and
+                                          r.relation_type == 'blocks' then
+                                        removeit = true
+                                      end
+                                      if not removeit and issuefieldlocation["precedent_items"] and
+                                        r.relation_type == 'precedes' then
+                                        removeit = true
+                                      end
+                                      if not removeit and issuefieldlocation["related_items"] and
+                                        r.relation_type == 'relates' then
+                                        removeit = true
+                                      end
+                                      
+                                      if removeit then
+                                        r.issue_from.relations_from.delete(r)
+                                        r.destroy
+                                      end
+                                  }
+
+                                  # Ahora que hemos eliminado las relaciones residuales, vamos a crear las nuevas
+                                  # Se hace en este orden para que existan las menores colisiones
+                                  relations_to_add.each {|r|
+                                    if r[:type] == 'parent' then
+                                      thisitem.parent = r[:item_from]
+                                    else
+                                      #print("Creo una nueva relacion")
+                                      relation = r[:item_from].relations_from.new
+                                      relation.issue_to = thisitem
+                                      relation.relation_type = r[:type]
+                                      relation.errors.clear
+                                      if (relation.save) then
+                                        #print(relation.to_s+" ... ok\n")
+                                      else
+                                        #print(relation.to_s+" ... nok\n")
+                                        relation.errors.full_messages.each  do |message|
+                                          print("--> " + message + "\n")
+                                        end                            
+                                      end
+                                    end
+                                  }
+                                  
+                                  thisitem.errors.clear
+                                  if (thisitem.save) then
+                                    print(thisitem.identifier+" ... relations ok\n")
+                                  else
+                                    print(thisitem.identifier+" ... relations nok\n")
+                                    thisitem.errors.full_messages.each  do |message|
+                                      print("--> " + message + "\n")
+                                    end
+                                  end
+                                  if changeditem then
+                                    retvalue = retvalue and thisitem.save
+                                  end
+                                }
                               else
                                 retstr = "No items imported, review the import file.  Did you Shift+Ctrl+F9 and saved it before submitting it? (1.1)"
                               end
@@ -823,7 +939,7 @@ class CosmosysGitController < ApplicationController
     else
       retstr = "The setting entry for the cosmosysGit plugin does not exist: plugin_cosmosys_git"
     end
-    return ret,retstr
+    return retvalue,retstr
   end
 
   def export_project_repo(repo_folder,export_preferences,thisproject)
@@ -1032,7 +1148,7 @@ class CosmosysGitController < ApplicationController
                               lastextrausedcolumn += 1
                               extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
                             end
-                            thiskey = "parent"      
+                            thiskey = "parent"
                             if issuefieldlocation.key?(thiskey) then
                               location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
                               issuefieldlocation[thiskey] = location
@@ -1323,5 +1439,26 @@ class CosmosysGitController < ApplicationController
     end
     return ret,retstr
   end
+
+  private
+
+  def extract_cellvalue_from_key(k,location_dict,sheet_index,row_i)
+    ret = nil    
+    if location_dict.key?(k) then
+      thisfield = sheet_index[location_dict[k][:sheet]].cell(row_i,
+      location_dict[k][:column])
+      if thisfield != nil then 
+        ret = thisfield.value
+        if ret == nil then
+          puts("the row ",row_i," does not have a "+k+" value")
+        end
+      else
+        puts("the row ",row_i," does not have a "+k+" field")                                    
+      end
+    end
+    return ret
+  end
+
+
 end
   
