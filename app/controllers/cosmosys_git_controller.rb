@@ -34,6 +34,9 @@ class CosmosysGitController < ApplicationController
             ret = true
             @project.cschapters_gen
           else
+            if retstr.size <= 0 then
+              retstr = "Import failed, Unknown reason, ask cosmobots? and submit traces"
+            end
             returnmessage += retstr
           end
         else
@@ -71,7 +74,7 @@ class CosmosysGitController < ApplicationController
       repo_folder,remoteurl = update_create_repo_folder()
       if repo_folder != nil then
         @project.cschapters_gen
-        retvalue,retstr = export_project_repo(repo_folder,@export)
+        retvalue,retstr = export_project_repo(repo_folder,@export,@project)
         if (retvalue) then
           ret = commit_push_project_repo(repo_folder)
           if (ret) then
@@ -375,7 +378,7 @@ class CosmosysGitController < ApplicationController
   @@categoriescolumn = 10 #J
   @@dictlistfirstrow = 2
   @@dictlastrow = [1,27] #AA1
-  @@issueslastrow = [1,29] #AA1
+  @@issueslastrow = [1,29] #AC1
   
   # Definitions of the cells in the "Items" sheet of the export file
   @@issuesfirstrow = 2
@@ -386,7 +389,7 @@ class CosmosysGitController < ApplicationController
     s = Setting.find_by_name("plugin_cosmosys_git")
     if (s != nil) then
       if (s.value != nil) then
-        s3 = s.value["import_path"]
+        s3 = s.value["import_path"].gsub("%project_code%",@project.code)
         if (s3 != nil) then
           s3 = File.join(repo_folder, s3)
           if (File.file?(s3)) then
@@ -410,382 +413,389 @@ class CosmosysGitController < ApplicationController
                       else
                         retstr = ""
                         lastrow = dictsheet.cell(@@dictlastrow[0],@@dictlastrow[1]).value
-                        puts("lastrow",lastrow)
-                        currentrow = @@dictlistfirstrow
-                        errorfound = false
-                        while (currentrow <= lastrow) do
-                          thisitem = dictsheet.cell(currentrow,@@trackerscolumn)
-                          if thisitem != nil and thisitem.value != nil then
-                            element = Tracker.find_by_name(thisitem.value)
-                            if element == nil then
-                              retstr += "The tracker "+thisitem.value+" does not exist" 
-                              errorfound = true
+                        if lastrow != nil and lastrow != "" then
+                          puts("lastrow 2",lastrow)
+                          currentrow = @@dictlistfirstrow
+                          errorfound = false
+                          while (currentrow <= lastrow) do
+                            thisitem = dictsheet.cell(currentrow,@@trackerscolumn)
+                            if thisitem != nil and thisitem.value != nil then
+                              element = Tracker.find_by_name(thisitem.value)
+                              if element == nil then
+                                retstr += "The tracker "+thisitem.value+" does not exist" 
+                                errorfound = true
+                              end
+                            end
+                            currentrow += 1
+                            #puts("tracker row",currentrow)
+                          end
+
+                          if not errorfound then
+                            currentrow = @@dictlistfirstrow
+                            while (currentrow <= lastrow) do
+                              thisitem = dictsheet.cell(currentrow,@@statusescolumn)                          
+                              if thisitem != nil and thisitem.value != nil then
+                                element = IssueStatus.find_by_name(thisitem.value)
+                                if element == nil then
+                                  retstr += "The status "+thisitem.value+" does not exist"
+                                  errorfound = true
+                                end                       
+                              end
+                              currentrow += 1
+                            end  
+                          end
+
+                          if not errorfound then
+                            currentrow = @@dictlistfirstrow
+                            while (currentrow <= lastrow) do
+                              thisitem = dictsheet.cell(currentrow,@@prioritiescolumn)                          
+                              if thisitem != nil and thisitem.value != nil then
+                                element = IssuePriority.find_by_name(thisitem.value)
+                                if element == nil then
+                                  retstr += "The priority "+thisitem.value+" does not exist"
+                                  errorfound = true
+                                end                       
+                              end
+                              currentrow += 1
+                            end  
+                          end
+
+                          dictmembers = {}
+                          @project.members.each {|m|
+                            dictmembers[m.user.login] = m
+                          }
+                          if not errorfound then
+                            currentrow = @@dictlistfirstrow
+                            while (currentrow <= lastrow) do
+                              thisitem = dictsheet.cell(currentrow,@@teamcolumn)                     
+                              if thisitem != nil and thisitem.value != nil then
+                                element = dictmembers[thisitem.value]
+                                if element == nil then
+                                  retstr += "The project member "+thisitem.value+" does not exist"
+                                  errorfound = true
+                                end
+                              end
+                              currentrow += 1
+                            end  
+                          end
+
+                          if not errorfound then
+                            currentrow = @@dictlistfirstrow
+                            while (currentrow <= lastrow) do
+                              thisitem = dictsheet.cell(currentrow,@@versionscolumn)                     
+                              if thisitem != nil and thisitem.value != nil then
+                                element = @project.versions.find_by_name(thisitem.value)
+                                if element == nil then
+                                  retstr += "The version "+thisitem.value+" does not exist"
+                                  errorfound = true
+                                end                       
+                              end
+                              currentrow += 1
+                            end  
+                          end
+
+                          if not errorfound then
+                            currentrow = @@dictlistfirstrow
+                            while (currentrow <= lastrow) do
+                              thisitem = dictsheet.cell(currentrow,@@categoriescolumn)                     
+                              if thisitem != nil and thisitem.value != nil then
+                                element = @project.issue_categories.find_by_name(thisitem.value)
+                                if element == nil then
+                                  retstr += "The category "+thisitem.value+" does not exist"
+                                  errorfound = true
+                                end                       
+                              end
+                              currentrow += 1
+                            end  
+                          end
+
+                          if not errorfound then
+                            # We need to create two dictionaries for the fields using the two sheets: Items and Extrafield
+                            sheetindexes = {}
+                            sheetindexes['extra'] = extrasheet
+                            sheetindexes['issues'] = issuessheet
+                            sheetindexes['dict'] = dictsheet
+
+                            # Fields of the items sheet
+                            index = 1
+                            issuefieldlocation = {}
+                            issuessheet.row(@@issuesheadersrow).cells.each{|i|
+                              if (i.value != nil) then
+                                if not issuefieldlocation.key?(i.value) then
+                                  location = {:sheet => 'issues', :column =>index}
+                                  issuefieldlocation[i.value] = location
+                                end
+                              end
+                              index += 1
+                            }
+
+                            # Fields of the extra fields sheet
+                            index = 1
+                            extrasheet.row(@@issuesheadersrow).cells.each{|i|
+                              if i.value != nil then
+                                if not issuefieldlocation.key?(i.value) then
+                                  location = {:sheet => 'extra', :column =>index}
+                                  issuefieldlocation[i.value] = location
+                                end
+                              end
+                              index += 1
+                            }
+
+                            puts("++++++ LOCATION +++++++++")
+                            puts(issuefieldlocation)
+
+                            lastrow = dictsheet.cell(@@issueslastrow[0],@@issueslastrow[1]).value
+                            if lastrow != nil and lastrow != "" then
+                              puts("lastrow 1",lastrow)
+                              currentrow = @@issuesfirstrow
+                              dictitems = {}
+                              if currentrow < lastrow then
+                                while currentrow <= lastrow do
+                                  thisitem = nil
+                                  thisrow = issuessheet.row(currentrow)
+                                  if thisrow != nil then
+                                    thiskey = "ID"
+                                    if issuefieldlocation.key?(thiskey) then
+                                      thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                        issuefieldlocation[thiskey][:column])
+                                      if thisfield != nil then 
+                                        thisvalue = thisfield.value
+                                        if thisvalue != nil then
+                                          thisitem = @project.csys.find_issue_by_identifier(thisvalue)
+                                          if (thisitem == nil) then
+                                            thisitem = @project.issues.new
+                                          end
+                                          dictitems[thisvalue] = thisitem
+                                        else
+                                          puts("the row ",currentrow," does not have an ID")
+                                        end
+                                      end
+                                    end
+
+                                    if thisitem != nil then
+                                      thiskey = "tracker"
+                                      if issuefieldlocation.key?(thiskey) then
+                                        thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                          issuefieldlocation[thiskey][:column])
+                                        if thisfield != nil then 
+                                          thisvalue = thisfield.value
+                                          if thisvalue != nil then
+                                            thistracker = Tracker.find_by_name(thisvalue)
+                                            if (thistracker != nil) then
+                                              thisitem.tracker = thistracker
+                                            else
+                                              puts("the tracker ",thisvalue," does not exist")
+                                            end
+                                          else
+                                            puts("the row ",currentrow," does not have a tracker value")
+                                          end
+                                        else
+                                          puts("the row ",currentrow," does not have a tracker field")                                    
+                                        end
+                                      end
+
+                                      thiskey = "subject"
+                                      if issuefieldlocation.key?(thiskey) then
+                                        thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                          issuefieldlocation[thiskey][:column])
+                                        if thisfield != nil then 
+                                          thisvalue = thisfield.value
+                                          if thisvalue != nil then
+                                              thisitem.subject = thisvalue
+                                          else
+                                            puts("the row ",currentrow," does not have a subject value")
+                                          end
+                                        else
+                                          puts("the row ",currentrow," does not have a subject field")                                    
+                                        end
+                                      end
+
+                                      if thisitem != nil then
+                                        thiskey = "status"
+                                        if issuefieldlocation.key?(thiskey) then
+                                          thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                            issuefieldlocation[thiskey][:column])
+                                          if thisfield != nil then 
+                                            thisvalue = thisfield.value
+                                            if thisvalue != nil then
+                                              thisstatus = IssueStatus.find_by_name(thisvalue)
+                                              if (thisstatus != nil) then
+                                                thisitem.status = thisstatus
+                                              else
+                                                puts("the status ",thisvalue," does not exist")
+                                              end
+                                            else
+                                              puts("the row ",currentrow," does not have a status value")
+                                            end
+                                          else
+                                            puts("the row ",currentrow," does not have a status field")                                    
+                                          end
+                                        end
+                                      end
+
+                                      if thisitem != nil then
+                                        thiskey = "assignee"
+                                        if issuefieldlocation.key?(thiskey) then
+                                          thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                            issuefieldlocation[thiskey][:column])
+                                          if thisfield != nil then 
+                                            thisvalue = thisfield.value
+                                            if thisvalue != nil then
+                                              thismember = dictmembers[thisvalue]
+                                              if (thismember != nil) then
+                                                thisitem.assigned_to = thismember.user
+                                              else
+                                                puts("the project team member ",thisvalue," does not exist")
+                                              end
+                                            else
+                                              puts("the row ",currentrow," does not have a assignee value")
+                                            end
+                                          else
+                                            puts("the row ",currentrow," does not have a assignee field")                                    
+                                          end
+                                        end
+                                      end
+
+                                      thiskey = "description"
+                                      if issuefieldlocation.key?(thiskey) then
+                                        thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                          issuefieldlocation[thiskey][:column])
+                                        if thisfield != nil then 
+                                          thisvalue = thisfield.value
+                                          if thisvalue != nil then
+                                              thisitem.description = thisvalue
+                                          else
+                                            puts("the row ",currentrow," does not have a description value")
+                                          end
+                                        else
+                                          puts("the row ",currentrow," does not have a description field")                                    
+                                        end
+                                      end
+
+                                      if thisitem != nil then
+                                        thiskey = "parent"
+                                        if issuefieldlocation.key?(thiskey) then
+                                          thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                            issuefieldlocation[thiskey][:column])
+                                          if thisfield != nil then 
+                                            thisvalue = thisfield.value
+                                            if thisvalue != nil then
+                                              thisparentitem = dictitems[thisvalue]
+                                              if (thisparentitem == nil) then
+                                                thisparentitem = @project.csys.find_issue_by_identifier(thisvalue)
+                                              end
+                                              if (thisparentitem != nil) then
+                                                thisitem.parent = thisparentitem
+                                              else
+                                                puts("the parent issue ",thisvalue," does not exist")
+                                              end
+                                            else
+                                              puts("the row ",currentrow," does not have a parent value")
+                                            end
+                                          else
+                                            puts("the row ",currentrow," does not have a parent field")                                    
+                                          end
+                                        end
+                                      end
+        
+                                      thiskey = "estimated_hours"
+                                      if issuefieldlocation.key?(thiskey) then
+                                        thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                          issuefieldlocation[thiskey][:column])
+                                        if thisfield != nil then 
+                                          thisvalue = thisfield.value
+                                          if thisvalue != nil then
+                                              thisitem.estimated_hours = thisvalue
+                                          else
+                                            puts("the row ",currentrow," does not have a estimated_hours value")
+                                          end
+                                        else
+                                          puts("the row ",currentrow," does not have a estimated_hours field")                                    
+                                        end
+                                      end
+
+                                      thiskey = "start_date"
+                                      if issuefieldlocation.key?(thiskey) then
+                                        thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                          issuefieldlocation[thiskey][:column])
+                                        if thisfield != nil then 
+                                          thisvalue = thisfield.value
+                                          if thisvalue != nil then
+                                              thisitem.start_date = thisvalue
+                                          else
+                                            puts("the row ",currentrow," does not have a start_date value")
+                                          end
+                                        else
+                                          puts("the row ",currentrow," does not have a start_date field")                                    
+                                        end
+                                      end
+
+                                      thiskey = "due_date"
+                                      if issuefieldlocation.key?(thiskey) then
+                                        thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                          issuefieldlocation[thiskey][:column])
+                                        if thisfield != nil then 
+                                          thisvalue = thisfield.value
+                                          if thisvalue != nil then
+                                              thisitem.due_date = thisvalue
+                                          else
+                                            puts("the row ",currentrow," does not have a due_date value")
+                                          end
+                                        else
+                                          puts("the row ",currentrow," does not have a due_date field")                                    
+                                        end
+                                      end
+                                    end
+
+                                    IssueCustomField.all.each { |cf|
+                                      thiskey = cf.name
+                                      if issuefieldlocation.key?(thiskey) then
+                                        thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                          issuefieldlocation[thiskey][:column])
+                                        if thisfield != nil then 
+                                          thisvalue = thisfield.value
+                                          if thisvalue != nil then
+                                              cv = thisitem.custom_values.new
+                                              cv.value = thisvalue
+                                              cv.custom_field = cf
+                                              puts("the row "+currentrow.to_s+" have a "+cf.name+" value: "+thisvalue)  
+                                          else
+                                            puts("the row "+currentrow.to_s+" does not have a "+cf.name+" value")
+                                          end
+                                        else
+                                          puts("the row "+currentrow.to_s+" does not have a "+cf.name+" field")                                  
+                                        end
+                                      end                                
+                                    }
+
+
+                                    puts("vamos con la grabación")
+                                    if (thisitem != nil) then
+                                      if thisitem.author == nil then
+                                        thisitem.author = User.current
+                                      end
+                                      puts(thisitem.inspect)
+                                      saved = thisitem.save
+                                      puts thisitem.errors.full_messages                                
+                                      puts("grabamos",saved)
+                                      ret = saved
+                                    end
+                                  end
+                                  thisextrarow = extrasheet.row(currentrow)
+                                  if thisextrarow != nil then
+                                  end                            
+                                  currentrow += 1
+                                  puts("next row",currentrow)
+                                end
+                              else
+                                retstr = "No items imported, review the import file.  Did you Shift+Ctrl+F9 and saved it before submitting it? (1.1)"
+                              end
+                            else
+                              retstr = "The import file is not indicating the Items sheet last row in cell Dict!AC1"
                             end
                           end
-                          currentrow += 1
-                          #puts("tracker row",currentrow)
-                        end
-
-                        if not errorfound then
-                          currentrow = @@dictlistfirstrow
-                          while (currentrow <= lastrow) do
-                            thisitem = dictsheet.cell(currentrow,@@statusescolumn)                          
-                            if thisitem != nil and thisitem.value != nil then
-                              element = IssueStatus.find_by_name(thisitem.value)
-                              if element == nil then
-                                retstr += "The status "+thisitem.value+" does not exist"
-                                errorfound = true
-                              end                       
-                            end
-                            currentrow += 1
-                          end  
-                        end
-
-                        if not errorfound then
-                          currentrow = @@dictlistfirstrow
-                          while (currentrow <= lastrow) do
-                            thisitem = dictsheet.cell(currentrow,@@prioritiescolumn)                          
-                            if thisitem != nil and thisitem.value != nil then
-                              element = IssuePriority.find_by_name(thisitem.value)
-                              if element == nil then
-                                retstr += "The priority "+thisitem.value+" does not exist"
-                                errorfound = true
-                              end                       
-                            end
-                            currentrow += 1
-                          end  
-                        end
-
-                        dictmembers = {}
-                        @project.members.each {|m|
-                          dictmembers[m.user.login] = m
-                        }
-                        if not errorfound then
-                          currentrow = @@dictlistfirstrow
-                          while (currentrow <= lastrow) do
-                            thisitem = dictsheet.cell(currentrow,@@teamcolumn)                     
-                            if thisitem != nil and thisitem.value != nil then
-                              element = dictmembers[thisitem.value]
-                              if element == nil then
-                                retstr += "The project member "+thisitem.value+" does not exist"
-                                errorfound = true
-                              end
-                            end
-                            currentrow += 1
-                          end  
-                        end
-
-                        if not errorfound then
-                          currentrow = @@dictlistfirstrow
-                          while (currentrow <= lastrow) do
-                            thisitem = dictsheet.cell(currentrow,@@versionscolumn)                     
-                            if thisitem != nil and thisitem.value != nil then
-                              element = @project.versions.find_by_name(thisitem.value)
-                              if element == nil then
-                                retstr += "The version "+thisitem.value+" does not exist"
-                                errorfound = true
-                              end                       
-                            end
-                            currentrow += 1
-                          end  
-                        end
-
-                        if not errorfound then
-                          currentrow = @@dictlistfirstrow
-                          while (currentrow <= lastrow) do
-                            thisitem = dictsheet.cell(currentrow,@@categoriescolumn)                     
-                            if thisitem != nil and thisitem.value != nil then
-                              element = @project.issue_categories.find_by_name(thisitem.value)
-                              if element == nil then
-                                retstr += "The category "+thisitem.value+" does not exist"
-                                errorfound = true
-                              end                       
-                            end
-                            currentrow += 1
-                          end  
-                        end
-
-                        if not errorfound then
-                          # We need to create two dictionaries for the fields using the two sheets: Items and Extrafield
-                          sheetindexes = {}
-                          sheetindexes['extra'] = extrasheet
-                          sheetindexes['issues'] = issuessheet
-                          sheetindexes['dict'] = dictsheet
-
-                          # Fields of the items sheet
-                          index = 1
-                          issuefieldlocation = {}
-                          issuessheet.row(@@issuesheadersrow).cells.each{|i|
-                            if (i.value != nil) then
-                              if not issuefieldlocation.key?(i.value) then
-                                location = {:sheet => 'issues', :column =>index}
-                                issuefieldlocation[i.value] = location
-                              end
-                            end
-                            index += 1
-                          }
-
-                          # Fields of the extra fields sheet
-                          index = 1
-                          extrasheet.row(@@issuesheadersrow).cells.each{|i|
-                            if i.value != nil then
-                              if not issuefieldlocation.key?(i.value) then
-                                location = {:sheet => 'extra', :column =>index}
-                                issuefieldlocation[i.value] = location
-                              end
-                            end
-                            index += 1
-                          }
-
-                          puts("++++++ LOCATION +++++++++")
-                          puts(issuefieldlocation)
-
-                          lastrow = dictsheet.cell(@@issueslastrow[0],@@issueslastrow[1]).value
-                          currentrow = @@issuesfirstrow
-                          dictitems = {}
-                          while currentrow <= lastrow do
-                            thisitem = nil
-                            thisrow = issuessheet.row(currentrow)
-                            if thisrow != nil then
-                              thiskey = "ID"
-                              if issuefieldlocation.key?(thiskey) then
-                                thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                  issuefieldlocation[thiskey][:column])
-                                if thisfield != nil then 
-                                  thisvalue = thisfield.value
-                                  if thisvalue != nil then
-                                    thisitem = @project.csys.find_issue_by_identifier(thisvalue)
-                                    if (thisitem == nil) then
-                                      thisitem = @project.issues.new
-                                    end
-                                    dictitems[thisvalue] = thisitem
-                                  else
-                                    puts("the row ",currentrow," does not have an ID")
-                                  end
-                                end
-                              end
-
-                              if thisitem != nil then
-                                thiskey = "tracker"
-                                if issuefieldlocation.key?(thiskey) then
-                                  thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                    issuefieldlocation[thiskey][:column])
-                                  if thisfield != nil then 
-                                    thisvalue = thisfield.value
-                                    if thisvalue != nil then
-                                      thistracker = Tracker.find_by_name(thisvalue)
-                                      if (thistracker != nil) then
-                                        thisitem.tracker = thistracker
-                                      else
-                                        puts("the tracker ",thisvalue," does not exist")
-                                      end
-                                    else
-                                      puts("the row ",currentrow," does not have a tracker value")
-                                    end
-                                  else
-                                    puts("the row ",currentrow," does not have a tracker field")                                    
-                                  end
-                                end
-
-                                thiskey = "subject"
-                                if issuefieldlocation.key?(thiskey) then
-                                  thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                    issuefieldlocation[thiskey][:column])
-                                  if thisfield != nil then 
-                                    thisvalue = thisfield.value
-                                    if thisvalue != nil then
-                                        thisitem.subject = thisvalue
-                                    else
-                                      puts("the row ",currentrow," does not have a subject value")
-                                    end
-                                  else
-                                    puts("the row ",currentrow," does not have a subject field")                                    
-                                  end
-                                end
-
-                                if thisitem != nil then
-                                  thiskey = "status"
-                                  if issuefieldlocation.key?(thiskey) then
-                                    thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                      issuefieldlocation[thiskey][:column])
-                                    if thisfield != nil then 
-                                      thisvalue = thisfield.value
-                                      if thisvalue != nil then
-                                        thisstatus = IssueStatus.find_by_name(thisvalue)
-                                        if (thisstatus != nil) then
-                                          thisitem.status = thisstatus
-                                        else
-                                          puts("the status ",thisvalue," does not exist")
-                                        end
-                                      else
-                                        puts("the row ",currentrow," does not have a status value")
-                                      end
-                                    else
-                                      puts("the row ",currentrow," does not have a status field")                                    
-                                    end
-                                  end
-                                end
-
-                                if thisitem != nil then
-                                  thiskey = "assignee"
-                                  if issuefieldlocation.key?(thiskey) then
-                                    thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                      issuefieldlocation[thiskey][:column])
-                                    if thisfield != nil then 
-                                      thisvalue = thisfield.value
-                                      if thisvalue != nil then
-                                        thismember = dictmembers[thisvalue]
-                                        if (thismember != nil) then
-                                          thisitem.assigned_to = thismember.user
-                                        else
-                                          puts("the project team member ",thisvalue," does not exist")
-                                        end
-                                      else
-                                        puts("the row ",currentrow," does not have a assignee value")
-                                      end
-                                    else
-                                      puts("the row ",currentrow," does not have a assignee field")                                    
-                                    end
-                                  end
-                                end
-
-                                thiskey = "description"
-                                if issuefieldlocation.key?(thiskey) then
-                                  thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                    issuefieldlocation[thiskey][:column])
-                                  if thisfield != nil then 
-                                    thisvalue = thisfield.value
-                                    if thisvalue != nil then
-                                        thisitem.description = thisvalue
-                                    else
-                                      puts("the row ",currentrow," does not have a description value")
-                                    end
-                                  else
-                                    puts("the row ",currentrow," does not have a description field")                                    
-                                  end
-                                end
-
-                                if thisitem != nil then
-                                  thiskey = "parent"
-                                  if issuefieldlocation.key?(thiskey) then
-                                    thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                      issuefieldlocation[thiskey][:column])
-                                    if thisfield != nil then 
-                                      thisvalue = thisfield.value
-                                      if thisvalue != nil then
-                                        thisparentitem = dictitems[thisvalue]
-                                        if (thisparentitem == nil) then
-                                          thisparentitem = @project.csys.find_issue_by_identifier(thisvalue)
-                                        end
-                                        if (thisparentitem != nil) then
-                                          thisitem.parent = thisparentitem
-                                        else
-                                          puts("the parent issue ",thisvalue," does not exist")
-                                        end
-                                      else
-                                        puts("the row ",currentrow," does not have a parent value")
-                                      end
-                                    else
-                                      puts("the row ",currentrow," does not have a parent field")                                    
-                                    end
-                                  end
-                                end
-  
-                                thiskey = "estimated_hours"
-                                if issuefieldlocation.key?(thiskey) then
-                                  thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                    issuefieldlocation[thiskey][:column])
-                                  if thisfield != nil then 
-                                    thisvalue = thisfield.value
-                                    if thisvalue != nil then
-                                        thisitem.estimated_hours = thisvalue
-                                    else
-                                      puts("the row ",currentrow," does not have a estimated_hours value")
-                                    end
-                                  else
-                                    puts("the row ",currentrow," does not have a estimated_hours field")                                    
-                                  end
-                                end
-
-                                thiskey = "start_date"
-                                if issuefieldlocation.key?(thiskey) then
-                                  thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                    issuefieldlocation[thiskey][:column])
-                                  if thisfield != nil then 
-                                    thisvalue = thisfield.value
-                                    if thisvalue != nil then
-                                        thisitem.start_date = thisvalue
-                                    else
-                                      puts("the row ",currentrow," does not have a start_date value")
-                                    end
-                                  else
-                                    puts("the row ",currentrow," does not have a start_date field")                                    
-                                  end
-                                end
-
-                                thiskey = "due_date"
-                                if issuefieldlocation.key?(thiskey) then
-                                  thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                    issuefieldlocation[thiskey][:column])
-                                  if thisfield != nil then 
-                                    thisvalue = thisfield.value
-                                    if thisvalue != nil then
-                                        thisitem.due_date = thisvalue
-                                    else
-                                      puts("the row ",currentrow," does not have a due_date value")
-                                    end
-                                  else
-                                    puts("the row ",currentrow," does not have a due_date field")                                    
-                                  end
-                                end
-                              end
-
-                              IssueCustomField.all.each { |cf|
-                                thiskey = cf.name
-                                if issuefieldlocation.key?(thiskey) then
-                                  thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                    issuefieldlocation[thiskey][:column])
-                                  if thisfield != nil then 
-                                    thisvalue = thisfield.value
-                                    if thisvalue != nil then
-                                        cv = thisitem.custom_values.new
-                                        cv.value = thisvalue
-                                        cv.custom_field = cf
-                                        puts("the row "+currentrow.to_s+" have a "+cf.name+" value: "+thisvalue)  
-                                    else
-                                      puts("the row "+currentrow.to_s+" does not have a "+cf.name+" value")
-                                    end
-                                  else
-                                    puts("the row "+currentrow.to_s+" does not have a "+cf.name+" field")                                  
-                                  end
-                                end                                
-                              }
-=begin
-                              ## TODO REMOVE THIS PATCH
-                              cv = thisitem.custom_values.new
-                              cv.custom_field = IssueCustomField.find_by_name("rqType")
-                              cv.value = "Info"
-                              cv2 = thisitem.custom_values.new
-                              cv2.custom_field = IssueCustomField.find_by_name("rqLevel")
-                              cv2.value = "None"
-=end
-
-                              puts("vamos con la grabación")
-                              if (thisitem != nil) then
-                                thisitem.author = User.current
-                                saved = thisitem.save
-                                puts(thisitem.inspect)
-                                puts thisitem.errors.full_messages                                
-                                puts("grabamos",saved)
-                                ret = saved
-                              end
-                            end
-                            thisextrarow = extrasheet.row(currentrow)
-                            if thisextrarow != nil then
-                            end                            
-                            currentrow += 1
-                            puts("next row",currentrow)
-                          end
+                        else
+                          retstr = "The import file is not indicating the Dict sheet last row in cell Dict!AA1"
                         end
                       end
                     end
@@ -816,477 +826,491 @@ class CosmosysGitController < ApplicationController
     return ret,retstr
   end
 
-  def export_project_repo(repo_folder,export_preferences)
+  def export_project_repo(repo_folder,export_preferences,thisproject)
+    ret = false
     s = Setting.find_by_name("plugin_cosmosys_git")
     if (s != nil) then
       if (s.value != nil) then
-        s3 = s.value["export_path"]
+        puts s.value
+        s3 = s.value["export_path"].gsub("%project_code%",thisproject.code)
+        puts s3
         if (s3 != nil) then
-          s3 = File.join(repo_folder, s3)
-          s4 = s.value["export_template_path"]
-          if (s4 != nil) then
-            s4 = File.join(repo_folder, s4)
-            if (File.file?(s4)) then
-              # We copy the template over the last export file
-              comando = "cp #{s4} #{s3}"
-              puts("\n\n #{comando}")              
-              `#{comando}`
-              if (File.file?(s3)) then
-                book = Rspreadsheet.open(s3)
-                if (book != nil) then
-                  dictsheet = book.worksheets('Dict')
-                  if (dictsheet != nil) then
-                    issuessheet = book.worksheets('Items')
-                    if (issuessheet != nil) then
-                      extrasheet = book.worksheets('ExtraFields')
-                      puts("+++++++EXTRA FIELDS++++++++++")
-                      if extrasheet != nil then
-
-                        # DICT SHEET ###################
-                        s = Setting.find_by_name("host_name")
-                        p = Setting.find_by_name("protocol")
-                        prot = nil
-                        if s == nil or p == nil then
-                          splitted_url = request.fullpath.split('/cosmosys_reqs')
-                          print("\nsplitted_url: ",splitted_url)
-                          root_url = splitted_url[0]
-                          print("\nroot_url: ",root_url)
-                          print("\nbase_url: ",request.base_url)
-                          print("\nurl: ",request.url)
-                          print("\noriginal: ",request.original_url)
-                          print("\nhost: ",request.host)
-                          print("\nhost wp: ",request.host_with_port)
-                          print("\nfiltered_path: ",request.filtered_path)
-                          print("\nfullpath: ",request.fullpath)
-                          print("\npath_translated: ",request.path_translated)
-                          print("\noriginal_fullpath ",request.original_fullpath)
-                          print("\nserver_name ",request.server_name)
-                          print("\noriginal_fullpath ",request.original_fullpath)
-                          print("\npath ",request.path)
-                          print("\nserver_addr ",request.server_addr)
-                          print("\nhost ",request.host)
-                          print("\nremote_host ",request.remote_host)
-
-                          if s == nil then
-                            s = Setting.new
-                            s.name = "host_name"
-                            s.value = request.host_with_port
-                            s.save
-                          end
-                          if p == nil then
-                            p = Setting.new
-                            p.name = "protocol"
-                            prot = request.protocol
-                            if prot == "http://" then
-                              p.value =  "http"
-                              prot = p.value                          
-                              p.save
-                            else
-                              if prot == "https://" then
-                                p.value = "https"
+          if (File.extname(s3) != nil) then
+            s3 = File.join(repo_folder, s3)
+            s4 = s.value["export_template_path"]
+            if (s4 != nil) then
+              s4 = File.join(repo_folder, s4)
+              if (File.file?(s4)) then
+                # We copy the template over the last export file
+                comando = "cp #{s4} #{s3}"
+                puts("\n\n #{comando}")
+                `#{comando}`
+                if (File.file?(s3)) then
+                  book = Rspreadsheet.open(s3)
+                  if (book != nil) then
+                    dictsheet = book.worksheets('Dict')
+                    if (dictsheet != nil) then
+                      issuessheet = book.worksheets('Items')
+                      if (issuessheet != nil) then
+                        extrasheet = book.worksheets('ExtraFields')
+                        puts("+++++++EXTRA FIELDS++++++++++")
+                        if extrasheet != nil then
+  
+                          # DICT SHEET ###################
+                          s = Setting.find_by_name("host_name")
+                          p = Setting.find_by_name("protocol")
+                          prot = nil
+                          if s == nil or p == nil then
+                            splitted_url = request.fullpath.split('/cosmosys_reqs')
+                            print("\nsplitted_url: ",splitted_url)
+                            root_url = splitted_url[0]
+                            print("\nroot_url: ",root_url)
+                            print("\nbase_url: ",request.base_url)
+                            print("\nurl: ",request.url)
+                            print("\noriginal: ",request.original_url)
+                            print("\nhost: ",request.host)
+                            print("\nhost wp: ",request.host_with_port)
+                            print("\nfiltered_path: ",request.filtered_path)
+                            print("\nfullpath: ",request.fullpath)
+                            print("\npath_translated: ",request.path_translated)
+                            print("\noriginal_fullpath ",request.original_fullpath)
+                            print("\nserver_name ",request.server_name)
+                            print("\noriginal_fullpath ",request.original_fullpath)
+                            print("\npath ",request.path)
+                            print("\nserver_addr ",request.server_addr)
+                            print("\nhost ",request.host)
+                            print("\nremote_host ",request.remote_host)
+  
+                            if s == nil then
+                              s = Setting.new
+                              s.name = "host_name"
+                              s.value = request.host_with_port
+                              s.save
+                            end
+                            if p == nil then
+                              p = Setting.new
+                              p.name = "protocol"
+                              prot = request.protocol
+                              if prot == "http://" then
+                                p.value =  "http"
                                 prot = p.value                          
                                 p.save
                               else
-                                puts "Unknown protocol "+prot+" can not save the Redmine setting"
-                              end
-                            end
-                          end
-                        else
-                          prot = p.value
-                        end
-
-
-                        dictsheet.cell(@@rmserverurlcell[0],@@rmserverurlcell[1]).value = prot+"://"+s.value
-                        dictsheet.cell(@@rmkeycell[0],@@rmkeycell[1]).value = "my API Key?"
-                        dictsheet.cell(@@rmprojectidcell[0],@@rmprojectidcell[1]).value = @project.identifier
-                        dictsheet.cell(@@projectcodecell[0],@@projectcodecell[1]).value = @project.code
-                        currentrow = @@dictlistfirstrow
-                        Tracker.all.each{|t|
-                          dictsheet.cell(currentrow,@@trackerscolumn).value = t.name
-                          currentrow += 1
-                        }
-                        currentrow = @@dictlistfirstrow
-                        IssueStatus.all.each{|s|
-                          dictsheet.cell(currentrow,@@statusescolumn).value = s.name
-                          currentrow += 1
-                        }
-                        currentrow = @@dictlistfirstrow
-                        IssuePriority.all.each{|s|
-                          dictsheet.cell(currentrow,@@prioritiescolumn).value = s.name
-                          currentrow += 1
-                        }                      
-                        currentrow = @@dictlistfirstrow
-                        @project.members.each {|m|
-                          dictsheet.cell(currentrow,@@teamcolumn).value = m.user.login
-                          currentrow += 1
-                        }
-                        currentrow = @@dictlistfirstrow
-                        @project.versions.each {|v|
-                          dictsheet.cell(currentrow,@@versionscolumn).value = v.name
-                          currentrow += 1
-                        }
-                        currentrow = @@dictlistfirstrow
-                        @project.issue_categories.each {|c|
-                          dictsheet.cell(currentrow,@@categoriescolumn).value = c.name
-                          currentrow += 1
-                        }
-
-                        # We need to create two dictionaries for the fields using the two sheets: Items and Extrafield
-                        sheetindexes = {}
-                        sheetindexes['extra'] = extrasheet
-                        sheetindexes['issues'] = issuessheet
-                        sheetindexes['dict'] = dictsheet
-
-                        # Fields of the items sheet
-                        index = 1
-                        issuefieldlocation = {}
-                        issuessheet.row(@@issuesheadersrow).cells.each{|i|
-                          if (i.value != nil) then
-                            if not issuefieldlocation.key?(i.value) then
-                              location = {:sheet => 'issues', :column =>index}
-                              issuefieldlocation[i.value] = location
-                            end
-                          end
-                          index += 1
-                        }
-
-                        # Fields of the extra fields sheet
-                        index = 1
-                        lastextrausedcolumn = nil
-                        extrasheet.row(@@issuesheadersrow).cells.each{|i|
-                          if i.value != nil then
-                            if not issuefieldlocation.key?(i.value) then
-                              location = {:sheet => 'extra', :column =>index}
-                              issuefieldlocation[i.value] = location
-                            end
-                            lastextrausedcolumn = index
-                          end
-                          index += 1
-                        }
-
-                        include_precedent = issuefieldlocation.key?("precedent_items")
-                        include_blocking = issuefieldlocation.key?("blocking_items")
-                        include_related = issuefieldlocation.key?("related_items")
-                        
-                        if export_preferences['include_fields'] then
-                          thiskey = "RM#"
-                          if issuefieldlocation.key?(thiskey) then
-                            location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
-                            issuefieldlocation[thiskey] = location
-                            lastextrausedcolumn += 1
-                            extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
-                          end
-                          thiskey = "ID"
-                          if issuefieldlocation.key?(thiskey) then
-                            location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
-                            issuefieldlocation[thiskey] = location
-                            lastextrausedcolumn += 1
-                            extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
-                          end                          
-                          thiskey = "tracker"
-                          if issuefieldlocation.key?(thiskey) then
-                            location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
-                            issuefieldlocation[thiskey] = location
-                            lastextrausedcolumn += 1
-                            extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
-                          end
-                          thiskey = "subject"      
-                          if issuefieldlocation.key?(thiskey) then
-                            location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
-                            issuefieldlocation[thiskey] = location
-                            lastextrausedcolumn += 1
-                            extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
-                          end              
-                          thiskey = "status"
-                          if issuefieldlocation.key?(thiskey) then
-                            location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
-                            issuefieldlocation[thiskey] = location
-                            lastextrausedcolumn += 1
-                            extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
-                          end
-                          thiskey = "assignee"      
-                          if issuefieldlocation.key?(thiskey) then
-                            location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
-                            issuefieldlocation[thiskey] = location
-                            lastextrausedcolumn += 1
-                            extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
-                          end
-                          thiskey = "description"      
-                          if issuefieldlocation.key?(thiskey) then
-                            location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
-                            issuefieldlocation[thiskey] = location
-                            lastextrausedcolumn += 1
-                            extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
-                          end
-                          thiskey = "parent"      
-                          if issuefieldlocation.key?(thiskey) then
-                            location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
-                            issuefieldlocation[thiskey] = location
-                            lastextrausedcolumn += 1
-                            extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
-                          end
-
-                          thiskey = "estimated_hours"
-                          if issuefieldlocation.key?(thiskey) then
-                            location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
-                            issuefieldlocation[thiskey] = location
-                            lastextrausedcolumn += 1
-                            extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
-                          end
-
-                          thiskey = "start_date"
-                          if issuefieldlocation.key?(thiskey) then
-                            location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
-                            issuefieldlocation[thiskey] = location
-                            lastextrausedcolumn += 1
-                            extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
-                          end
-
-                          thiskey = "due_date"
-                          if issuefieldlocation.key?(thiskey) then
-                            location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
-                            issuefieldlocation[thiskey] = location
-                            lastextrausedcolumn += 1
-                            extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
-                          end            
-
-                          if not include_precedent then
-                            thiskey = "precedent_items"
-                            location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
-                            issuefieldlocation[thiskey] = location
-                            lastextrausedcolumn += 1
-                            extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
-                            include_precedent = true
-                          end
-
-                          if not include_blocking then
-                            thiskey = "blocking_items"
-                            location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
-                            issuefieldlocation[thiskey] = location
-                            lastextrausedcolumn += 1
-                            extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
-                            include_blocking = true
-                          end
-
-                          if not include_related then
-                            thiskey = "related_items"
-                            location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
-                            issuefieldlocation[thiskey] = location
-                            lastextrausedcolumn += 1
-                            extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
-                            include_related = true
-                          end
-                        end
-
-                        # Extra custom fields not in the template, to be appended as columns in the extrafields
-                        # sheet
-                        if export_preferences['include_cfields'] != nil and export_preferences['include_cfields'] then
-                          IssueCustomField.all.each{|cf|
-                            if not issuefieldlocation.key?(cf.name) then
-                              location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
-                              issuefieldlocation[cf.name] = location
-                              lastextrausedcolumn += 1
-                              extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = cf.name
-                            end
-                          }
-                        end
-                        puts("++++++ LOCATION +++++++++")
-                        puts(issuefieldlocation)
-
-
-                        # Normal Issue fields
-                        currentrow = @@issuesfirstrow
-                        @project.issues.each{|i|
-                          thiskey = "RM#"
-                          if issuefieldlocation.key?(thiskey) then
-                            sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                              issuefieldlocation[thiskey][:column]).value = i.id
-                          end
-                          thiskey = "ID"
-                          if issuefieldlocation.key?(thiskey) then
-                            sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                              issuefieldlocation[thiskey][:column]).value = i.identifier
-                          end                          
-                          thiskey = "tracker"
-                          if issuefieldlocation.key?(thiskey) then
-                            sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                              issuefieldlocation[thiskey][:column]).value = i.tracker.name
-                          end
-                          thiskey = "subject"      
-                          if issuefieldlocation.key?(thiskey) then
-                            sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                              issuefieldlocation[thiskey][:column]).value = i.subject
-                          end              
-                          thiskey = "status"
-                          if issuefieldlocation.key?(thiskey) then
-                            sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                              issuefieldlocation[thiskey][:column]).value = i.status.name
-                          end
-                          if (i.assigned_to != nil) then              
-                            thiskey = "assignee"      
-                            if issuefieldlocation.key?(thiskey) then
-                              sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                issuefieldlocation[thiskey][:column]).value = i.assigned_to.login
-                            end
-                          end
-                          thiskey = "description"      
-                          if issuefieldlocation.key?(thiskey) then
-                            sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                              issuefieldlocation[thiskey][:column]).value = i.description
-                          end
-                          if (i.parent != nil) then
-                            thiskey = "parent"      
-                            if issuefieldlocation.key?(thiskey) then
-                              sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                issuefieldlocation[thiskey][:column]).value = i.parent.identifier
-                            end
-                          end
-                          thiskey = "estimated_hours"
-                          if issuefieldlocation.key?(thiskey) then
-                            sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                              issuefieldlocation[thiskey][:column]).value = i.estimated_hours
-                          end
-                          thiskey = "start_date"
-                          if issuefieldlocation.key?(thiskey) then
-                            sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                              issuefieldlocation[thiskey][:column]).value = i.start_date
-                          end
-                          thiskey = "due_date"
-                          if issuefieldlocation.key?(thiskey) then
-                            sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                              issuefieldlocation[thiskey][:column]).value = i.due_date
-                          end                                                    
-                          #Now we enumerate the relations where the issue is the destination
-                          rlsstr = nil
-                          blkstr = nil
-                          relstr = nil
-                          rls = i.relations_to
-                          
-                          rls.each{|rl|                          
-                            if include_precedent and (rl.relation_type == "precedes") then
-                              if rlsstr != nil then
-                                rlsstr += ","
-                              else
-                                rlsstr = ""
-                              end
-                              rlsstr += rl.issue_from.identifier
-                            end
-                            if include_blocking and (rl.relation_type == "blocks") then
-                              if blkstr != nil then
-                                blkstr += ","
-                              else
-                                blkstr = ""
-                              end
-                              blkstr += rl.issue_from.identifier
-                            end
-                            if include_related and (rl.relation_type == "relates") then
-                              if relstr != nil then
-                                relstr += ","
-                              else
-                                relstr = ""
-                              end
-                              relstr += rl.issue_from.identifier
-                            end
-                          }
-                          if include_precedent and rlsstr != nil then 
-                              sheetindexes[issuefieldlocation["precedent_items"][:sheet]].cell(currentrow,
-                                issuefieldlocation["precedent_items"][:column]).value = rlsstr
-                          end
-                          if include_blocking and blkstr != nil then
-                              sheetindexes[issuefieldlocation["blocking_items"][:sheet]].cell(currentrow,
-                                issuefieldlocation["blocking_items"][:column]).value = blkstr
-                          end
-                          if include_related and relstr != nil then
-                              sheetindexes[issuefieldlocation["related_items"][:sheet]].cell(currentrow,
-                                issuefieldlocation["related_items"][:column]).value = relstr
-                          end
-                          if (i.last_notes != nil) then
-                            thiskey = "last_notes"
-                            if issuefieldlocation.key?(thiskey) then
-                              sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                issuefieldlocation[thiskey][:column]).value = i.last_notes
-                            end
-                          end
-                          if (i.priority != nil) then
-                            thiskey = "priority"
-                            if issuefieldlocation.key?(thiskey) then
-                              sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                issuefieldlocation[thiskey][:column]).value = i.priority.name
-                            end
-                          end
-                          if (i.fixed_version != nil) then
-                            thiskey = "version"
-                            if issuefieldlocation.key?(thiskey) then
-                              sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                issuefieldlocation[thiskey][:column]).value = i.fixed_version.name
-                            end
-                          end
-                          if (i.category != nil) then
-                            thiskey = "category"
-                            if issuefieldlocation.key?(thiskey) then
-                              sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                issuefieldlocation[thiskey][:column]).value = i.category.name
-                            end
-                          end                                                    
-
-                          i.custom_values.each{|cv|
-                            thiskey = cv.custom_field.name
-                            if issuefieldlocation.key?(thiskey) then
-                              prevvalue = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                issuefieldlocation[thiskey][:column]).value
-                              if (cv.custom_field.field_format == "float") then
-                                sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                  issuefieldlocation[thiskey][:column]).value = cv.value.to_f
-                              else
-                                if (cv.custom_field.field_format == "user") then
-                                  if (cv.value != nil) then
-                                    userid = cv.value.to_i
-                                    if (userid > 0) then
-                                      u = User.find(cv.value.to_i)
-                                      if (prevvalue == nil) then
-                                        sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                          issuefieldlocation[thiskey][:column]).value = u.login
-                                      else
-                                        sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                          issuefieldlocation[thiskey][:column]).value = prevvalue + "," + u.login
-                                      end
-                                    end
-                                  end
+                                if prot == "https://" then
+                                  p.value = "https"
+                                  prot = p.value                          
+                                  p.save
                                 else
-                                  sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                    issuefieldlocation[thiskey][:column]).value = cv.value
+                                  puts "Unknown protocol "+prot+" can not save the Redmine setting"
                                 end
                               end
                             end
+                          else
+                            prot = p.value
+                          end
+  
+  
+                          dictsheet.cell(@@rmserverurlcell[0],@@rmserverurlcell[1]).value = prot+"://"+s.value
+                          dictsheet.cell(@@rmkeycell[0],@@rmkeycell[1]).value = "my API Key?"
+                          dictsheet.cell(@@rmprojectidcell[0],@@rmprojectidcell[1]).value = thisproject.identifier
+                          dictsheet.cell(@@projectcodecell[0],@@projectcodecell[1]).value = thisproject.code
+                          currentrow = @@dictlistfirstrow
+                          Tracker.all.each{|t|
+                            dictsheet.cell(currentrow,@@trackerscolumn).value = t.name
+                            currentrow += 1
                           }
-                          currentrow += 1
-                        }
-                        ret = book.save
-                        if ret == false then
-                          retstr = "Could not save export file: "+s3
+                          currentrow = @@dictlistfirstrow
+                          IssueStatus.all.each{|s|
+                            dictsheet.cell(currentrow,@@statusescolumn).value = s.name
+                            currentrow += 1
+                          }
+                          currentrow = @@dictlistfirstrow
+                          IssuePriority.all.each{|s|
+                            dictsheet.cell(currentrow,@@prioritiescolumn).value = s.name
+                            currentrow += 1
+                          }                      
+                          currentrow = @@dictlistfirstrow
+                          thisproject.members.each {|m|
+                            dictsheet.cell(currentrow,@@teamcolumn).value = m.user.login
+                            currentrow += 1
+                          }
+                          currentrow = @@dictlistfirstrow
+                          thisproject.versions.each {|v|
+                            dictsheet.cell(currentrow,@@versionscolumn).value = v.name
+                            currentrow += 1
+                          }
+                          currentrow = @@dictlistfirstrow
+                          thisproject.issue_categories.each {|c|
+                            dictsheet.cell(currentrow,@@categoriescolumn).value = c.name
+                            currentrow += 1
+                          }
+  
+                          # We need to create two dictionaries for the fields using the two sheets: Items and Extrafield
+                          sheetindexes = {}
+                          sheetindexes['extra'] = extrasheet
+                          sheetindexes['issues'] = issuessheet
+                          sheetindexes['dict'] = dictsheet
+  
+                          # Fields of the items sheet
+                          index = 1
+                          issuefieldlocation = {}
+                          issuessheet.row(@@issuesheadersrow).cells.each{|i|
+                            if (i.value != nil) then
+                              if not issuefieldlocation.key?(i.value) then
+                                location = {:sheet => 'issues', :column =>index}
+                                issuefieldlocation[i.value] = location
+                              end
+                            end
+                            index += 1
+                          }
+  
+                          # Fields of the extra fields sheet
+                          index = 1
+                          lastextrausedcolumn = nil
+                          extrasheet.row(@@issuesheadersrow).cells.each{|i|
+                            if i.value != nil then
+                              if not issuefieldlocation.key?(i.value) then
+                                location = {:sheet => 'extra', :column =>index}
+                                issuefieldlocation[i.value] = location
+                              end
+                              lastextrausedcolumn = index
+                            end
+                            index += 1
+                          }
+  
+                          include_precedent = issuefieldlocation.key?("precedent_items")
+                          include_blocking = issuefieldlocation.key?("blocking_items")
+                          include_related = issuefieldlocation.key?("related_items")
+                          
+                          if export_preferences['include_fields'] then
+                            thiskey = "RM#"
+                            if issuefieldlocation.key?(thiskey) then
+                              location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                              issuefieldlocation[thiskey] = location
+                              lastextrausedcolumn += 1
+                              extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
+                            end
+                            thiskey = "ID"
+                            if issuefieldlocation.key?(thiskey) then
+                              location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                              issuefieldlocation[thiskey] = location
+                              lastextrausedcolumn += 1
+                              extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
+                            end                          
+                            thiskey = "tracker"
+                            if issuefieldlocation.key?(thiskey) then
+                              location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                              issuefieldlocation[thiskey] = location
+                              lastextrausedcolumn += 1
+                              extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
+                            end
+                            thiskey = "subject"      
+                            if issuefieldlocation.key?(thiskey) then
+                              location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                              issuefieldlocation[thiskey] = location
+                              lastextrausedcolumn += 1
+                              extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
+                            end              
+                            thiskey = "status"
+                            if issuefieldlocation.key?(thiskey) then
+                              location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                              issuefieldlocation[thiskey] = location
+                              lastextrausedcolumn += 1
+                              extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
+                            end
+                            thiskey = "assignee"      
+                            if issuefieldlocation.key?(thiskey) then
+                              location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                              issuefieldlocation[thiskey] = location
+                              lastextrausedcolumn += 1
+                              extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
+                            end
+                            thiskey = "description"      
+                            if issuefieldlocation.key?(thiskey) then
+                              location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                              issuefieldlocation[thiskey] = location
+                              lastextrausedcolumn += 1
+                              extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
+                            end
+                            thiskey = "parent"      
+                            if issuefieldlocation.key?(thiskey) then
+                              location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                              issuefieldlocation[thiskey] = location
+                              lastextrausedcolumn += 1
+                              extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
+                            end
+  
+                            thiskey = "estimated_hours"
+                            if issuefieldlocation.key?(thiskey) then
+                              location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                              issuefieldlocation[thiskey] = location
+                              lastextrausedcolumn += 1
+                              extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
+                            end
+  
+                            thiskey = "start_date"
+                            if issuefieldlocation.key?(thiskey) then
+                              location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                              issuefieldlocation[thiskey] = location
+                              lastextrausedcolumn += 1
+                              extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
+                            end
+  
+                            thiskey = "due_date"
+                            if issuefieldlocation.key?(thiskey) then
+                              location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                              issuefieldlocation[thiskey] = location
+                              lastextrausedcolumn += 1
+                              extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
+                            end            
+  
+                            if not include_precedent then
+                              thiskey = "precedent_items"
+                              location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                              issuefieldlocation[thiskey] = location
+                              lastextrausedcolumn += 1
+                              extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
+                              include_precedent = true
+                            end
+  
+                            if not include_blocking then
+                              thiskey = "blocking_items"
+                              location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                              issuefieldlocation[thiskey] = location
+                              lastextrausedcolumn += 1
+                              extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
+                              include_blocking = true
+                            end
+  
+                            if not include_related then
+                              thiskey = "related_items"
+                              location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                              issuefieldlocation[thiskey] = location
+                              lastextrausedcolumn += 1
+                              extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
+                              include_related = true
+                            end
+                          end
+  
+                          # Extra custom fields not in the template, to be appended as columns in the extrafields
+                          # sheet
+                          if export_preferences['include_cfields'] != nil and export_preferences['include_cfields'] then
+                            IssueCustomField.all.each{|cf|
+                              if not issuefieldlocation.key?(cf.name) then
+                                location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
+                                issuefieldlocation[cf.name] = location
+                                lastextrausedcolumn += 1
+                                extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = cf.name
+                              end
+                            }
+                          end
+                          puts("++++++ LOCATION +++++++++")
+                          puts(issuefieldlocation)
+  
+  
+                          # Normal Issue fields
+                          currentrow = @@issuesfirstrow
+                          thisproject.issues.each{|i|
+                            puts("Processing issues ",currentrow,i)
+                            thiskey = "RM#"
+                            if issuefieldlocation.key?(thiskey) then
+                              sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                issuefieldlocation[thiskey][:column]).value = i.id
+                            end
+                            thiskey = "ID"
+                            if issuefieldlocation.key?(thiskey) then
+                              sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                issuefieldlocation[thiskey][:column]).value = i.identifier
+                            end                          
+                            thiskey = "tracker"
+                            if issuefieldlocation.key?(thiskey) then
+                              sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                issuefieldlocation[thiskey][:column]).value = i.tracker.name
+                            end
+                            thiskey = "subject"      
+                            if issuefieldlocation.key?(thiskey) then
+                              sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                issuefieldlocation[thiskey][:column]).value = i.subject
+                            end              
+                            thiskey = "status"
+                            if issuefieldlocation.key?(thiskey) then
+                              sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                issuefieldlocation[thiskey][:column]).value = i.status.name
+                            end
+                            if (i.assigned_to != nil) then              
+                              thiskey = "assignee"      
+                              if issuefieldlocation.key?(thiskey) then
+                                sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                  issuefieldlocation[thiskey][:column]).value = i.assigned_to.login
+                              end
+                            end
+                            thiskey = "description"      
+                            if issuefieldlocation.key?(thiskey) then
+                              sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                issuefieldlocation[thiskey][:column]).value = i.description
+                            end
+                            if (i.parent != nil) then
+                              thiskey = "parent"      
+                              if issuefieldlocation.key?(thiskey) then
+                                sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                  issuefieldlocation[thiskey][:column]).value = i.parent.identifier
+                              end
+                            end
+                            thiskey = "estimated_hours"
+                            if issuefieldlocation.key?(thiskey) then
+                              sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                issuefieldlocation[thiskey][:column]).value = i.estimated_hours
+                            end
+                            thiskey = "start_date"
+                            if issuefieldlocation.key?(thiskey) then
+                              sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                issuefieldlocation[thiskey][:column]).value = i.start_date
+                            end
+                            thiskey = "due_date"
+                            if issuefieldlocation.key?(thiskey) then
+                              sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                issuefieldlocation[thiskey][:column]).value = i.due_date
+                            end                                                    
+                            #Now we enumerate the relations where the issue is the destination
+                            rlsstr = nil
+                            blkstr = nil
+                            relstr = nil
+                            rls = i.relations_to
+                            
+                            rls.each{|rl|                          
+                              if include_precedent and (rl.relation_type == "precedes") then
+                                if rlsstr != nil then
+                                  rlsstr += ","
+                                else
+                                  rlsstr = ""
+                                end
+                                rlsstr += rl.issue_from.identifier
+                              end
+                              if include_blocking and (rl.relation_type == "blocks") then
+                                if blkstr != nil then
+                                  blkstr += ","
+                                else
+                                  blkstr = ""
+                                end
+                                blkstr += rl.issue_from.identifier
+                              end
+                              if include_related and (rl.relation_type == "relates") then
+                                if relstr != nil then
+                                  relstr += ","
+                                else
+                                  relstr = ""
+                                end
+                                relstr += rl.issue_from.identifier
+                              end
+                            }
+                            if include_precedent and rlsstr != nil then 
+                                sheetindexes[issuefieldlocation["precedent_items"][:sheet]].cell(currentrow,
+                                  issuefieldlocation["precedent_items"][:column]).value = rlsstr
+                            end
+                            if include_blocking and blkstr != nil then
+                                sheetindexes[issuefieldlocation["blocking_items"][:sheet]].cell(currentrow,
+                                  issuefieldlocation["blocking_items"][:column]).value = blkstr
+                            end
+                            if include_related and relstr != nil then
+                                sheetindexes[issuefieldlocation["related_items"][:sheet]].cell(currentrow,
+                                  issuefieldlocation["related_items"][:column]).value = relstr
+                            end
+                            if (i.last_notes != nil) then
+                              thiskey = "last_notes"
+                              if issuefieldlocation.key?(thiskey) then
+                                sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                  issuefieldlocation[thiskey][:column]).value = i.last_notes
+                              end
+                            end
+                            if (i.priority != nil) then
+                              thiskey = "priority"
+                              if issuefieldlocation.key?(thiskey) then
+                                sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                  issuefieldlocation[thiskey][:column]).value = i.priority.name
+                              end
+                            end
+                            if (i.fixed_version != nil) then
+                              thiskey = "version"
+                              if issuefieldlocation.key?(thiskey) then
+                                sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                  issuefieldlocation[thiskey][:column]).value = i.fixed_version.name
+                              end
+                            end
+                            if (i.category != nil) then
+                              thiskey = "category"
+                              if issuefieldlocation.key?(thiskey) then
+                                sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                  issuefieldlocation[thiskey][:column]).value = i.category.name
+                              end
+                            end                                                    
+  
+                            i.custom_values.each{|cv|
+                              thiskey = cv.custom_field.name
+                              if issuefieldlocation.key?(thiskey) then
+                                prevvalue = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                  issuefieldlocation[thiskey][:column]).value
+                                if (cv.custom_field.field_format == "float") then
+                                  sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                    issuefieldlocation[thiskey][:column]).value = cv.value.to_f
+                                else
+                                  if (cv.custom_field.field_format == "user") then
+                                    if (cv.value != nil) then
+                                      userid = cv.value.to_i
+                                      if (userid > 0) then
+                                        u = User.find(cv.value.to_i)
+                                        if (prevvalue == nil) then
+                                          sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                            issuefieldlocation[thiskey][:column]).value = u.login
+                                        else
+                                          sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                            issuefieldlocation[thiskey][:column]).value = prevvalue + "," + u.login
+                                        end
+                                      end
+                                    end
+                                  else
+                                    sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                      issuefieldlocation[thiskey][:column]).value = cv.value
+                                  end
+                                end
+                              end
+                            }
+                            currentrow += 1
+                          }
+                          ret = book.save
+                          if ret == false then
+                            retstr = "Could not save export file: "+s3
+                          else
+                            if export_preferences['include_subprojects'] then
+                              thisproject.children.each {|cp|
+                                export_project_repo(repo_folder,export_preferences,cp)
+                              }
+                            else
+                              ret = true
+                            end
+                          end
                         else
-                          return true
+                          retstr = "Could not access the 'ExtraFields' sheet of the export file: "+s3
                         end
                       else
-                        retstr = "Could not access the 'ExtraFields' sheet of the export file: "+s3
+                        retstr = "Could not access the 'Items' sheet of the export file: "+s3
                       end
                     else
-                      retstr = "Could not access the 'Items' sheet of the export file: "+s3
+                      retstr = "Could not access the 'Dict' sheet of the export file: "+s3
                     end
                   else
-                    retstr = "Could not access the 'Dict' sheet of the export file: "+s3
+                    retstr = "Could not open the book of the export file: "+s3
                   end
                 else
-                  retstr = "Could not open the book of the export file: "+s3
+                  retstr = "The export file could not be created: "+s3
                 end
               else
-                retstr = "The export file could not be created: "+s3
+                retstr = "The template file does not exist: "+s4
               end
             else
-              retstr = "The template file does not exist: "+s4
-            end
-          else
-            retstr = "The setting for the template file does not exist: export_template_path"
+              retstr = "The setting for the template file does not exist: export_template_path"
+            end            
+          else 
+            retstr = "The export path setting has no extension "+s.value["export_path"]
           end
         else
           retstr = "The setting for the exporting path does not exist: export_path"
@@ -1297,7 +1321,7 @@ class CosmosysGitController < ApplicationController
     else
       retstr = "The setting entry for the cosmosysGit plugin does not exist: plugin_cosmosys_git"
     end
-    return false,retstr
+    return ret,retstr
   end
 end
   
