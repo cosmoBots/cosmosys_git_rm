@@ -32,7 +32,7 @@ class CosmosysGitController < ApplicationController
           if (retvalue) then
             returnmessage += "Everything went OK"
             ret = true
-            @project.cschapters_gen
+            #@project.cschapters_gen
           else
             if retstr.size <= 0 then
               retstr = "Import failed, Unknown reason, ask cosmobots? and submit traces"
@@ -73,7 +73,7 @@ class CosmosysGitController < ApplicationController
       returnmessage = ""
       repo_folder,remoteurl = update_create_repo_folder()
       if repo_folder != nil then
-        @project.cschapters_gen
+        #@project.cschapters_gen
         retvalue,retstr = export_project_repo(repo_folder,@export,@project)
         if (retvalue) then
           ret = commit_push_project_repo(repo_folder)
@@ -739,109 +739,18 @@ class CosmosysGitController < ApplicationController
                                     residual_relations << e
                                   }
 
-                                  if issuefieldlocation["blocking_items"] then
-                                    # Blocking items
-                                    rel_str = node['blocking_items']
-                                    if rel_str != nil then
-                                      related_req = node['blocking_items'].split(',')
-                                      related_req.each { |rreq|
-                                        rreq = rreq.strip()
-                                        #print("\n  related to: '"+rreq+"'")
-                                        # Busco ese requisito
-                                        blocking_req = @project.csys.find_issue_by_identifier(rreq)
-                                        if (blocking_req != nil) then
-                                          #print(" encontrado ",blocking_req.id)
-                                          # Veo si ya existe algun tipo de relacion con el
-                                          preexistent_relations = thisitem.relations_to.where(issue_from: blocking_req)
-                                          #print(preexistent_relations)
-                                          already_exists = false
-                                          if (preexistent_relations.size>0) then
-                                            preexistent_relations.each { |rel|
-                                              if (rel.relation_type == 'blocks') then
-                                                #print("Ya existe la relacion ",rel)
-                                                residual_relations.delete(rel)
-                                                already_exists = true
-                                              end
-                                            }
-                                          end
-                                          if not(already_exists) then
-                                            relations_to_add += [{:type => 'blocks', :item_from => blocking_req}]
-                                          end
-                                        else
-                                          print("Error, no existe el requisito bloqueante"+rreq)
-                                        end
-                                      }
-                                    end
-                                  end
 
-                                  if issuefieldlocation["precedent_items"] then
-                                    # Precedent items
-                                    rel_str = node['precedent_items']
-                                    if rel_str != nil then
-                                      related_req = node['precedent_items'].split(',')
-                                      related_req.each { |rreq|
-                                        rreq = rreq.strip()
-                                        #print("\n  related to: '"+rreq+"'")
-                                        # Busco ese requisito
-                                        precedent_req = @project.csys.find_issue_by_identifier(rreq)
-                                        if (precedent_req != nil) then
-                                          #print(" encontrado ",precedent_req.id)
-                                          # Veo si ya existe algun tipo de relacion con el
-                                          preexistent_relations = thisitem.relations_to.where(issue_from: precedent_req)
-                                          #print(preexistent_relations)
-                                          already_exists = false
-                                          if (preexistent_relations.size>0) then
-                                            preexistent_relations.each { |rel|
-                                              if (rel.relation_type == 'precedes') then
-                                                #print("Ya existe la relacion ",rel)
-                                                residual_relations.delete(rel)
-                                                already_exists = true
-                                              end
-                                            }
-                                          end
-                                          if not(already_exists) then
-                                            relations_to_add += [{:type => 'precedes', :item_from => precedent_req}]
-                                          end
-                                        else
-                                          print("Error, no existe el requisito predecesor")
-                                        end
-                                      }
-                                    end
+                                  thiskey = "blocking_items"
+                                  if issuefieldlocation[thiskey] then
+                                    relations_to_add += get_relations_to_Add(thiskey,"blocks",node,dcititems,@project)
                                   end
-
-                                  if issuefieldlocation["related_items"] then
-                                    # Related items
-                                    rel_str = node['related_items']
-                                    if rel_str != nil then
-                                      related_req = node['related_items'].split(',')
-                                      related_req.each { |rreq|
-                                        rreq = rreq.strip()
-                                        #print("\n  related to: '"+rreq+"'")
-                                        # Busco ese requisito
-                                        related_req = @project.csys.find_issue_by_identifier(rreq)
-                                        if (related_req != nil) then
-                                          #print(" encontrado ",related_req.id)
-                                          # Veo si ya existe algun tipo de relacion con el
-                                          preexistent_relations = thisitem.relations_to.where(issue_from: related_req)
-                                          #print(preexistent_relations)
-                                          already_exists = false
-                                          if (preexistent_relations.size>0) then
-                                            preexistent_relations.each { |rel|
-                                              if (rel.relation_type == 'relates') then
-                                                #print("Ya existe la relacion ",rel)
-                                                residual_relations.delete(rel)
-                                                already_exists = true
-                                              end
-                                            }
-                                          end
-                                          if not(already_exists) then
-                                            relations_to_add += [{:type => 'relates', :item_from => related_req}]
-                                          end
-                                        else
-                                          print("Error, no existe el requisito relacionado")
-                                        end
-                                      }
-                                    end
+                                  thiskey = "precedent_items"
+                                  if issuefieldlocation[thiskey] then
+                                    relations_to_add += get_relations_to_Add(thiskey,"precedes",node,dcititems,@project)
+                                  end
+                                  thiskey = "related_items"
+                                  if issuefieldlocation[thiskey] then
+                                    relations_to_add += get_relations_to_Add(thiskey,"relates",node,dcititems,@project)
                                   end
 
                                   # Hay que eliminar todas las relaciones preexistentes que no hayan sido "reescritas"
@@ -1459,6 +1368,53 @@ class CosmosysGitController < ApplicationController
     return ret
   end
 
+
+  def get_relations_to_add(k,reltype,n,items_dict,p)
+    ret = []
+    # Obtaining the relations string of the given column name (key)
+    rel_str = n[k]
+    if rel_str != nil then
+      # Separating the related items identifiers 
+      rel_item_idents = n[k].split(',')
+      rel_item_idents.each { |rel_item_ident|
+        # Iterating each related item identifier
+        rel_item_ident = rel_item_ident.strip()
+        #print("\n  related to: '"+rel_item_ident+"'")
+        # Busco ese requisito
+        # Primero entre los recién cargados
+        rel_item_node = items_dict[rel_item_ident]
+        if (rel_item_node != nil) then
+          rel_req = rel_item_node['item']
+        end
+        if (rel_req == nil) then
+          # Si no lo hemos encontrado, entonces lo buscamos en el proyecto
+          rel_req = p.csys.find_issue_by_identifier(rel_item_ident)
+        end
+        if (rel_req != nil) then
+          #print(" encontrado ",rel_req.id)
+          # Veo si ya existe algun tipo de relacion con el
+          preexistent_relations = n['item'].relations_to.where(issue_from: rel_req)
+          #print(preexistent_relations)
+          already_exists = false
+          if (preexistent_relations.size>0) then
+            preexistent_relations.each { |rel|
+              if (rel.relation_type == reltype) then
+                #print("Ya existe la relacion ",rel)
+                residual_relations.delete(rel)
+                already_exists = true
+              end
+            }
+          end
+          if not(already_exists) then
+            ret += [{:type => reltype, :item_from => rel_req}]
+          end
+        else
+          print("Error, no existe el requisito '"+reltype+"' "+rel_item_ident)
+        end
+      }
+    end
+    return ret
+  end
 
 end
   
