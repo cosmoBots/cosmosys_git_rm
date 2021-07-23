@@ -742,15 +742,15 @@ class CosmosysGitController < ApplicationController
 
                                   thiskey = "blocking_items"
                                   if issuefieldlocation[thiskey] then
-                                    relations_to_add += get_relations_to_Add(thiskey,"blocks",node,dcititems,@project)
+                                    relations_to_add += get_relations_to_add(thiskey,"blocks",node,dictitems,@project)
                                   end
                                   thiskey = "precedent_items"
                                   if issuefieldlocation[thiskey] then
-                                    relations_to_add += get_relations_to_Add(thiskey,"precedes",node,dcititems,@project)
+                                    relations_to_add += get_relations_to_add(thiskey,"precedes",node,dictitems,@project)
                                   end
                                   thiskey = "related_items"
                                   if issuefieldlocation[thiskey] then
-                                    relations_to_add += get_relations_to_Add(thiskey,"relates",node,dcititems,@project)
+                                    relations_to_add += get_relations_to_add(thiskey,"relates",node,dictitems,@project)
                                   end
 
                                   # Hay que eliminar todas las relaciones preexistentes que no hayan sido "reescritas"
