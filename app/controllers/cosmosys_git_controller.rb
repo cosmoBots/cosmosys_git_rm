@@ -624,7 +624,18 @@ class CosmosysGitController < ApplicationController
                                         else
                                           puts("the project team member ",ret," does not exist")
                                         end
-                                      end                                        
+                                      end
+                                      
+                                      thiskey = "version"
+                                      ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
+                                      if ret != nil then
+                                        thisversion = @project.versions.find_by_name(ret)
+                                        if (thisversion != nil) then
+                                          thisitem.fixed_version = thisversion
+                                        else
+                                          puts("the project version ",ret," does not exist")
+                                        end
+                                      end
 
                                       thiskey = "description"
                                       ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
