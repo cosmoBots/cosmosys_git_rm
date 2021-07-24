@@ -418,7 +418,7 @@ class CosmosysGitController < ApplicationController
                         " != "+@project.identifier
                     else
                       if (dictsheet.cell(@@projectcodecell[0],@@projectcodecell[1]).value != @project.code) then
-                        retstr = "Project identifer mismatch, " + dictsheet.cell(@@projectcodecell[0],@@projectcodecell[1]).value + 
+                        retstr = "Project code mismatch, " + dictsheet.cell(@@projectcodecell[0],@@projectcodecell[1]).value + 
                           " != "+@project.code
                       else
                         retstr = ""
@@ -752,15 +752,15 @@ class CosmosysGitController < ApplicationController
 
                                   thiskey = "blocking_items"
                                   if issuefieldlocation[thiskey] then
-                                    relations_to_add += get_relations_to_add(thiskey,"blocks",node,dictitems,@project)
+                                    relations_to_add += get_relations_to_add(thiskey,"blocks",node,dictitems,@project,residual_relations)
                                   end
                                   thiskey = "precedent_items"
                                   if issuefieldlocation[thiskey] then
-                                    relations_to_add += get_relations_to_add(thiskey,"precedes",node,dictitems,@project)
+                                    relations_to_add += get_relations_to_add(thiskey,"precedes",node,dictitems,@project,residual_relations)
                                   end
                                   thiskey = "related_items"
                                   if issuefieldlocation[thiskey] then
-                                    relations_to_add += get_relations_to_add(thiskey,"relates",node,dictitems,@project)
+                                    relations_to_add += get_relations_to_add(thiskey,"relates",node,dictitems,@project,residual_relations)
                                   end
 
                                   # Hay que eliminar todas las relaciones preexistentes que no hayan sido "reescritas"
@@ -1392,7 +1392,7 @@ class CosmosysGitController < ApplicationController
   end
 
 
-  def get_relations_to_add(k,reltype,n,items_dict,p)
+  def get_relations_to_add(k,reltype,n,items_dict,p,residual_relations)
     ret = []
     # Obtaining the relations string of the given column name (key)
     rel_str = n[k]
