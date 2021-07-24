@@ -21,9 +21,9 @@ sign_in_route = urljoin(endpoint, "/users/sign_in")
 pat_route = urljoin(endpoint, "/-/profile/personal_access_tokens")
 
 login = "root"
-login_bot = "cosmobots"
-password = "cosmobotsDeployPassGIT"
-password_bot = "cosmobotsDeployPassGIT"
+login_bot = None
+password = None
+password_bot = None
 
 def find_csrf_token(text):
     soup = BeautifulSoup(text, "lxml")
@@ -78,6 +78,16 @@ import gitlab
 import yaml
 
 def main():
+
+    configuser = {}
+
+    with open("/home/redmine/gitlabusercfg.yaml", "r") as fh:
+        yaml.load(configuser, fh)
+
+    login_bot = configuser['username']
+    password = configuser['userpass']
+    password_bot = configuser['userpass']
+
     csrf1, cookies1 = obtain_csrf_token()
     print("root", csrf1, cookies1,login,password)
     csrf2, cookies2 = sign_in(csrf1, cookies1,login,password)
@@ -172,19 +182,19 @@ def main():
     configyaml = {
         'endpoint' : endpoint,
         'roottoken' : token,
-        'username' : 'cosmobots',
-        'userpass' : 'cosmobotsDeployPassGIT',
+        'username' : login_bot,
+        'userpass' : password_bot,
         'authtokenname' : name,
         'authtoken' : token_bot
     }
 
     print("Voy a crear el fichero con este contenido",configyaml)
 
-    with open("~/gitlabapicfg.yaml", "w") as fh:
+    with open("/home/redmine/gitlabapicfg.yaml", "w") as fh:
         yaml.dump(configyaml, fh)
     
     k = user.keys.create({'title': 'cosmosys',
-        'key': open('~/.ssh/id_rsa.pub').read()})  
+        'key': open('/home/redmine/.ssh/id_rsa.pub').read()})  
 
     # This is for forgetting ensuring git is able to stablish the authenticity of the gitlab host
     # See https://serverfault.com/questions/132970/can-i-automatically-add-a-new-host-to-known-hosts
