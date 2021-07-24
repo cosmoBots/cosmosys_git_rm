@@ -34,7 +34,7 @@ class CosmosysGitController < ApplicationController
           if (retvalue) then
             returnmessage += "Everything went OK"
             ret = true
-            #@project.cschapters_gen
+            @project.update_cschapters
           else
             if retstr.size <= 0 then
               retstr = "Import failed, Unknown reason, ask cosmobots? and submit traces"
@@ -77,7 +77,6 @@ class CosmosysGitController < ApplicationController
       check_prepare_gitlab      
       repo_folder,remoteurl = update_create_repo_folder()
       if repo_folder != nil then
-        #@project.cschapters_gen
         retvalue,retstr = export_project_repo(repo_folder,@export,@project)
         if (retvalue) then
           ret = commit_push_project_repo(repo_folder)
