@@ -34,7 +34,7 @@ class CosmosysGitController < ApplicationController
           if (retvalue) then
             returnmessage += "Everything went OK"
             ret = true
-            @project.update_cschapters
+            @project.csys.update_cschapters
           else
             if retstr.size <= 0 then
               retstr = "Import failed, Unknown reason, ask cosmobots? and submit traces"
