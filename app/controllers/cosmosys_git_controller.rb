@@ -24,6 +24,7 @@ class CosmosysGitController < ApplicationController
       print("import POST!!!!!")
       ret = nil
       returnmessage = ""
+      check_prepare_gitlab
       repo_folder,remoteurl = update_create_repo_folder()
       if repo_folder != nil then
         rm_mirror_folder = update_create_repo_rm_mirror(remoteurl)
@@ -183,7 +184,8 @@ class CosmosysGitController < ApplicationController
               puts("\n\n #{comando}")
               `#{comando}`
               ## TODO: THIS IMPLIES GITLAB INCLUDED
-              gitlabconfig = YAML.load(File.read("/home/redmine/gitlabapicfg.yaml"))
+              gitlabCfgPath = "~/gitlabapicfg.yaml"
+              gitlabconfig = YAML.load(File.read(gitlabCfgPath))
               puts("yaml leído")
               puts(gitlabconfig)
               gitlabproject = check_create_gitlab_prj(gitlabconfig,reponame,remoteurl)
@@ -1350,6 +1352,17 @@ class CosmosysGitController < ApplicationController
   end
 
   private
+
+  def check_prepare_gitlab
+    gitlabCfgPath = "~/gitlabapicfg.yaml"
+    if not File.file?(gitlabCfgPath) then
+      comando = "python3 ./plugins/cosmosys_git/assets/scripts/gitlab-preparation.py"
+      puts("\n\n #{comando}")
+      output = `#{comando}`               
+      puts("=====================")
+      puts(output)                
+    end
+  end
 
   def extract_cellvalue_from_key(k,location_dict,sheet_index,row_i)
     ret = nil    
