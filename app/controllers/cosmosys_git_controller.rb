@@ -24,6 +24,7 @@ class CosmosysGitController < ApplicationController
       print("import POST!!!!!")
       ret = nil
       returnmessage = ""
+      puts("Ejecuto la preparacion de gitlab")
       check_prepare_gitlab
       repo_folder,remoteurl = update_create_repo_folder()
       if repo_folder != nil then
@@ -72,6 +73,8 @@ class CosmosysGitController < ApplicationController
       puts params
       ret = nil
       returnmessage = ""
+      puts("Ejecuto la preparacion de gitlab")
+      check_prepare_gitlab      
       repo_folder,remoteurl = update_create_repo_folder()
       if repo_folder != nil then
         #@project.cschapters_gen
@@ -167,6 +170,8 @@ class CosmosysGitController < ApplicationController
     return thisproject
   end
 
+  require 'fileutils'
+
   def create_template_repo(remoteurl)
     puts("+++++++create_template_repo++++++++")
     s = Setting.find_by_name("plugin_cosmosys_git")
@@ -184,7 +189,7 @@ class CosmosysGitController < ApplicationController
               puts("\n\n #{comando}")
               `#{comando}`
               ## TODO: THIS IMPLIES GITLAB INCLUDED
-              gitlabCfgPath = "~/gitlabapicfg.yaml"
+              gitlabCfgPath = "/home/redmine/gitlabapicfg.yaml"
               gitlabconfig = YAML.load(File.read(gitlabCfgPath))
               puts("yaml leído")
               puts(gitlabconfig)
@@ -199,6 +204,9 @@ class CosmosysGitController < ApplicationController
               puts(output)
               puts("Cloned?: "+ret)
               puts("Folder: "+ret)
+              puts("Deleting the template folder once the git repo has been created")
+              FileUtils.rm_rf(ret)
+
             end
           else
             puts("Error, the setting does not exist")
@@ -1354,8 +1362,10 @@ class CosmosysGitController < ApplicationController
   private
 
   def check_prepare_gitlab
-    gitlabCfgPath = "~/gitlabapicfg.yaml"
+    gitlabCfgPath = "/home/redmine/gitlabapicfg.yaml"
+    puts("Compruebo...")
     if not File.file?(gitlabCfgPath) then
+      puts("No existe, ,tengo que ejecutar el comando python")
       comando = "python3 ./plugins/cosmosys_git/assets/scripts/gitlab-preparation.py"
       puts("\n\n #{comando}")
       output = `#{comando}`               

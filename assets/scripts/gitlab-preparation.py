@@ -79,10 +79,10 @@ import yaml
 
 def main():
 
-    configuser = {}
+    yaml_file = "/home/redmine/gitlabusercfg.yaml" # key: value
 
-    with open("/home/redmine/gitlabusercfg.yaml", "r") as fh:
-        yaml.load(configuser, fh)
+    with open(yaml_file, "r") as fh:
+        configuser = yaml.load(fh, Loader=yaml.SafeLoader)
 
     login_bot = configuser['username']
     password = configuser['userpass']
