@@ -737,6 +737,7 @@ class CosmosysGitController < ApplicationController
                                 dictitems.each{|key,node|
                                   changeditem = false
                                   thisitem = node['item']
+                                  thisitem.reload
                                   puts("EXPLORING RELATIONSHIPS OF " + key +" "+ thisitem.identifier)
                                   puts(node)
 
@@ -1447,7 +1448,7 @@ class CosmosysGitController < ApplicationController
     rel_str = n[k]
     if rel_str != nil then
       # Separating the related items identifiers 
-      rel_item_idents = n[k].split(',')
+      rel_item_idents = n[k].split(/[\s,]/)
       rel_item_idents.each { |rel_item_ident|
         # Iterating each related item identifier
         rel_item_ident = rel_item_ident.strip()
@@ -1460,7 +1461,7 @@ class CosmosysGitController < ApplicationController
         end
         if (rel_req == nil) then
           # Si no lo hemos encontrado, entonces lo buscamos en el proyecto
-          rel_req = p.csys.find_issue_by_identifier(rel_item_ident)
+          rel_req = p.csys.find_issue_by_identifier(rel_item_ident,true)
         end
         if (rel_req != nil) then
           #print(" encontrado ",rel_req.id)
