@@ -637,9 +637,13 @@ class CosmosysGitController < ApplicationController
                                       end
 
                                       thiskey = "description"
-                                      ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
-                                      if ret != nil then
-                                        thisitem.description = ret
+                                      retcell = extract_cell_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
+                                      if retcell != nil then
+                                        descr = obtain_longtext(retcell)
+                                        if descr != nil then
+                                          puts("DESCRIPCION",descr)
+                                          thisitem.description = descr
+                                        end
                                       end
        
                                       thiskey = "estimated_hours"
@@ -663,10 +667,22 @@ class CosmosysGitController < ApplicationController
                                       IssueCustomField.all.each { |cf|
                                         thiskey = cf.name
                                         puts("++++ PROCESANDO++++ "+thiskey)
-                                        ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
-                                        if ret != nil then
-                                            cfty = thisitem.custom_field_values.select{|a| a.custom_field_id == cf.id }.first
-                                            cfty.value = ret
+                                        if thiskey != "rqRationale" then
+                                          ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
+                                          if ret != nil then
+                                              cfty = thisitem.custom_field_values.select{|a| a.custom_field_id == cf.id }.first
+                                              cfty.value = ret
+                                          end
+                                        else
+                                          retcell = extract_cell_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
+                                          if retcell != nil then
+                                            rational_str = obtain_longtext(retcell)
+                                            if (rational_str != nil) then
+                                              puts("RATIONAL:",rational_str)
+                                              cfty = thisitem.custom_field_values.select{|a| a.custom_field_id == cf.id }.first
+                                              cfty.value = rational_str
+                                            end
+                                          end                                          
                                         end
                                       }
 
@@ -1371,6 +1387,21 @@ class CosmosysGitController < ApplicationController
 
   private
 
+
+  def obtain_longtext(cell)
+    ret = ""
+    first = true 
+    cell.xmlnode.each_element {|e| 
+      if (first) then
+        first = false
+      else
+        ret += "\n"
+      end
+      ret += e.inner_xml.to_s
+    }
+    return ret
+  end
+
   def check_prepare_gitlab
     gitlabCfgPath = "/home/redmine/gitlabapicfg.yaml"
     puts("Compruebo...")
@@ -1384,16 +1415,13 @@ class CosmosysGitController < ApplicationController
     end
   end
 
-  def extract_cellvalue_from_key(k,location_dict,sheet_index,row_i)
+  def extract_cell_from_key(k,location_dict,sheet_index,row_i)
     ret = nil    
     if location_dict.key?(k) then
       thisfield = sheet_index[location_dict[k][:sheet]].cell(row_i,
       location_dict[k][:column])
       if thisfield != nil then 
-        ret = thisfield.value
-        if ret == nil then
-          puts("the row ",row_i," does not have a "+k+" value")
-        end
+        ret = thisfield
       else
         puts("the row ",row_i," does not have a "+k+" field")                                    
       end
@@ -1401,6 +1429,17 @@ class CosmosysGitController < ApplicationController
     return ret
   end
 
+  def extract_cellvalue_from_key(k,location_dict,sheet_index,row_i)
+    ret = nil
+    thisfield = extract_cell_from_key(k,location_dict,sheet_index,row_i)
+    if thisfield != nil then 
+      ret = thisfield.value
+      if ret == nil then
+        puts("the row ",row_i," does not have a "+k+" value")
+      end
+    end
+    return ret
+  end
 
   def get_relations_to_add(k,reltype,n,items_dict,p,residual_relations)
     ret = []
