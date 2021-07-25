@@ -1172,7 +1172,8 @@ class CosmosysGitController < ApplicationController
   
                           # Normal Issue fields
                           currentrow = @@issuesfirstrow
-                          thisproject.issues.each{|i|
+                          thisprojectissues = thisproject.issues.sort_by {|obj| obj.csys.chapter_str}
+                          thisprojectissues.each{|i|
                             puts("Processing issues ",currentrow,i)
                             thiskey = "RM#"
                             if issuefieldlocation.key?(thiskey) then
@@ -1232,7 +1233,13 @@ class CosmosysGitController < ApplicationController
                             if issuefieldlocation.key?(thiskey) then
                               sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
                                 issuefieldlocation[thiskey][:column]).value = i.due_date
-                            end                                                    
+                            end
+                            thiskey = "chapter"
+                            if issuefieldlocation.key?(thiskey) then
+                              sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
+                                issuefieldlocation[thiskey][:column]).value = i.csys.chapter_str
+                            end
+
                             #Now we enumerate the relations where the issue is the destination
                             rlsstr = nil
                             blkstr = nil
