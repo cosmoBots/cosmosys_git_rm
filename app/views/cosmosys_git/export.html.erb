@@ -15,5 +15,9 @@
   <label><%= "Include subprojects" %> </label>
   <%= check_box_tag 'export[include_subprojects]', 1, @export['include_subprojects'] %>
 </p>
+<p>
+<%= hidden_field_tag 'export[token]', 'VUBJKB23UIVI1UU1VOBVI@' %>
+</p>
+
 <%= submit_tag l(:button_export) %>
 <% end %>

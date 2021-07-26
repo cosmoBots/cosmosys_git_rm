@@ -61,16 +61,17 @@ class CosmosysGitController < ApplicationController
     @export = (params[:export] || session[:export] || nil) 
     if @export == nil then
       @export = {}
-      @export['include_subprojects'] = true
+      @export['include_subprojects'] = false
       @export['include_fields'] = false
       @export['include_cfields'] = false
     end
     puts @export
     if request.get? then
-      print("export GET!!!!!")
+      puts("export GET!!!!!")
     else
-      print("export POST!!!!!")
-      puts params
+      puts("export POST!!!!!")
+      puts params[:export]
+      puts session[:export]  
       ret = nil
       returnmessage = ""
       puts("Ejecuto la preparacion de gitlab")
@@ -79,7 +80,7 @@ class CosmosysGitController < ApplicationController
       if repo_folder != nil then
         retvalue,retstr = export_project_repo(repo_folder,@export,@project)
         if (retvalue) then
-          ret = commit_push_project_repo(repo_folder)
+          ret = commit_push_project_repo(repo_folder,@export['include_subprojects'])
           if (ret) then
             rm_mirror_folder = update_create_repo_rm_mirror(remoteurl)
             if rm_mirror_folder != nil then
@@ -97,13 +98,17 @@ class CosmosysGitController < ApplicationController
       else
         returnmessage += "Could not create/update the repo folder"
       end
-      if (ret != nil and ret == true) then 
+=begin
+      ret = @export['include_subprojects']
+      returnmessage = "subprojects "+@export['include_subprojects'].to_s+" fields "+@export['include_fields'].to_s+" cfields "+@export['include_cfields'].to_s
+=end
+      if (ret != nil and ret == true) then
         flash[:notice] = returnmessage
       else
         flash[:error] = returnmessage
       end
+      session[:export] = @export
     end
-    session[:export] = @export
   end
 
   def report
@@ -136,8 +141,12 @@ class CosmosysGitController < ApplicationController
     #print("Project: "+@project.to_s+"\n")
   end  
 
-  def commit_push_project_repo(repo_folder)
-    comando = "cd #{repo_folder}; git add .;git commit -m \"[csys bot] Export executed\";git push --all"
+  def commit_push_project_repo(repo_folder,including_subprojects = false)
+    commit_str = "[csys bot] Export executed"
+    if including_subprojects
+      commit_str += ", including subprojects"
+    end
+    comando = "cd #{repo_folder}; git add .;git commit -m \""+commit_str+"\";git push --all"
     puts("\n\n #{comando}")
     `#{comando}`
     return true
