@@ -1,7 +1,20 @@
 <h2>CosmosysGitController#import</h2>
 
-<p>THIS WILL UPLOAD THE IMPORT DOCUMENT FROM THE REPO TO THE REDMINE.</p>
+<p>THIS WILL UPLOAD THE IMPORT DOCUMENT FROM THE REPOSITORY.</p>
 <%= form_tag({:controller => 'cosmosys_git', :action => 'import'}, :class => "tabular", :multipart => true) do %>
-<%= submit_tag l(:button_import) %>
+
+    <h3>Previous steps </h3>
+    <p>
+      <label><%= "Import a new template from documents section to the repository" %> </label>
+      <%= check_box_tag 'import[template]', 1, @import['template'] %>
+    </p>
+    <p>
+      <label><%= "Import requirements_file from documents section to the repository" %> </label>
+      <%= check_box_tag 'import[from_repo]', 1, @import['from_repo'] %>
+    </p>
+    <%= hidden_field_tag 'import[token]', 'VUBJKB23UIVI1UU1VOBVI@' %>
+
+    <%= submit_tag l(:button_import) %>
+
 <% end %>
 

@@ -18,6 +18,12 @@ class CosmosysGitController < ApplicationController
   end
 
   def import
+    @import = (params[:import] || session[:import] || nil) 
+    if @import == nil then
+      @import = {}
+      @import['template'] = false
+      @import['from_repo'] = false
+    end    
     if request.get? then
       print("import GET!!!!!")
     else
@@ -52,7 +58,8 @@ class CosmosysGitController < ApplicationController
         flash[:notice] = returnmessage
       else
         flash[:error] = returnmessage
-      end      
+      end
+      session[:import] = @import
     end
 
   end
