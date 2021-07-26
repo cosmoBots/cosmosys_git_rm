@@ -114,6 +114,13 @@ class CosmosysGitController < ApplicationController
     end    
   end
 
+  private
+
+  require 'fileutils'
+  require 'yaml'
+  require 'gitlab'
+  require 'rspreadsheet'
+
   def find_this_project
     # @project variable must be set before calling the authorize filter
     if (params[:issue_id]) then
@@ -128,12 +135,6 @@ class CosmosysGitController < ApplicationController
     end
     #print("Project: "+@project.to_s+"\n")
   end  
-
-  private
-
-  require 'fileutils'
-  require 'yaml'
-  require 'gitlab'
 
   def commit_push_project_repo(repo_folder)
     comando = "cd #{repo_folder}; git add .;git commit -m \"[csys bot] Export executed\";git push --all"
@@ -168,8 +169,6 @@ class CosmosysGitController < ApplicationController
     end
     return thisproject
   end
-
-  require 'fileutils'
 
   def create_template_repo(remoteurl)
     puts("+++++++create_template_repo++++++++")
@@ -368,11 +367,8 @@ class CosmosysGitController < ApplicationController
     return ret
   end
 
-
   def report_repo
   end
-
-  require 'rspreadsheet'
 
   # Definitions of the cells in the "Dict" sheet of the export file
   @@rmserverurlcell = [2,2] #B2
@@ -1392,9 +1388,6 @@ class CosmosysGitController < ApplicationController
     end
     return ret,retstr
   end
-
-  private
-
 
   def obtain_longtext(cell)
     ret = ""
