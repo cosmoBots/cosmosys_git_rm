@@ -1,0 +1,1 @@
+This folder contains the import file (normally called csys%project_code%.ods)
