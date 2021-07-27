@@ -3,6 +3,13 @@
 <p>THIS WILL OVERWRITE THE EXPORT FILES AT REPOSITORY.</p>
 
 <%= form_tag({:controller => 'cosmosys_git', :action => 'export'}, :class => "tabular", :multipart => true) do %>
+  <h3>Previous steps </h3>
+  <p>
+    <label><%= "Import a new template from documents section to the repository" %> </label>
+    <%= check_box_tag 'export[import_template]', 1, @export['import_template'] %>
+  </p>
+
+  <h3>Export parameters </h3>
   <p>
     <label><%= "Include all the normal fields available" %> </label>
     <%= check_box_tag 'export[include_fields]', 1, @export['include_fields'] %>

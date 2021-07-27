@@ -28,4 +28,8 @@ Redmine::Plugin.register :cosmosys_git do
     "reporting_img_path" => "03_reporting/03_img"
     }, :partial => 'settings/cosmosys_git_settings'
 
+  require 'cosmosys_git'
+  # Patches to the Redmine core.
+  require 'document_patch'
+  require 'project_patch_git'
 end
