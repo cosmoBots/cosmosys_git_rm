@@ -1,6 +1,9 @@
-<h2>CosmosysGitController#export</h2>
+<h2>Exporting a project file</h2>
 
 <p>THIS WILL OVERWRITE THE EXPORT FILES AT REPOSITORY.</p>
+<%= textilizable("* Hint: You can upload a new template file at document:csysTemplate and check the option 'Import a new template ...'") %>
+<%= textilizable("* Hint: You can download the exported main file from source:\"csys|#{@project.csys_git.get_export_path[0]}\" ") %>
+<%= textilizable("* Hint: If you select to include the subprojects the exported files can be found at source:\"csys|#{File.dirname(@project.csys_git.get_export_path[0])}\" ") %>
 
 <%= form_tag({:controller => 'cosmosys_git', :action => 'export'}, :class => "tabular", :multipart => true) do %>
   <h3>Previous steps </h3>

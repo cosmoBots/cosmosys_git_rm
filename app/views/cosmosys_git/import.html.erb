@@ -1,18 +1,19 @@
-<h2>CosmosysGitController#import</h2>
+<h2>Importing a project file...</h2>
 
-<p>THIS WILL UPLOAD THE IMPORT DOCUMENT FROM THE REPOSITORY.</p>
+<p>THIS WILL IMPORT DOCUMENT FROM THE REPOSITORY.</p>
 <%= form_tag({:controller => 'cosmosys_git', :action => 'import'}, :class => "tabular", :multipart => true) do %>
+  <%= textilizable("* Hint: You can upload a new import file at document:csysImport and check the option 'Import requirements file from documents section ...'") %>
+  <%= textilizable("* Hint: The place where the import file is found at the repo is source:\"csys|#{@project.csys_git.get_import_path[0]}\"") %>
+  
+  <h3>Previous steps </h3>
+  <p>
+    <label><%= "Copy import file from documents section to the repository" %> </label>
+    <%= check_box_tag 'import[from_documents]', 1, @import['from_documents'] %>
+  </p>
+  <h3>Import parameters </h3>
+  <p>-- No parameters at the moment</p>
+  <%= hidden_field_tag 'import[token]', 'VUBJKB23UIVI1UU1VOBVI@' %>
 
-    <h3>Previous steps </h3>
-    <p>
-      <label><%= "Import requirements_file from documents section to the repository" %> </label>
-      <%= check_box_tag 'import[from_documents]', 1, @import['from_documents'] %>
-    </p>
-    <h3>Import parameters </h3>
-    <p>-- No parameters at the moment</p>
-    <%= hidden_field_tag 'import[token]', 'VUBJKB23UIVI1UU1VOBVI@' %>
-
-    <%= submit_tag l(:button_import) %>
-
+  <%= submit_tag l(:button_import) %>
 <% end %>
 

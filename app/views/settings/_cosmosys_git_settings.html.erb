@@ -1,8 +1,4 @@
 <p>
-  <label><%= "repo_server_sync" %> </label>
-  <%= check_box_tag 'settings[repo_server_sync]', 1, @settings['repo_server_sync'] %>
-</p>
-<p>
   <label><%= "repo_local_path" %></label>
   <%= text_field_tag 'settings[repo_local_path]', @settings['repo_local_path'] %>
 </p>
@@ -13,10 +9,6 @@
 <p>
   <label><%= "repo_template_id" %></label>
   <%= text_field_tag 'settings[repo_template_id]', @settings['repo_template_id'] %>
-</p>
-<p>
-  <label><%= "repo_redmine_sync" %> </label>
-  <%= check_box_tag 'settings[repo_redmine_sync]', 1, @settings['repo_redmine_sync'] %>
 </p>
 <p>
   <label><%= "repo_redmine_path" %></label>
@@ -37,10 +29,6 @@
 <p>
   <label><%= "export_path" %></label>
   <%= text_field_tag 'settings[export_path]', @settings['export_path'] %>
-</p>
-<p>
-  <label><%= "import_template_path" %></label>
-  <%= text_field_tag 'settings[import_template_path]', @settings['import_template_path'] %>
 </p>
 <p>
   <label><%= "export_template_path" %></label>

@@ -12,6 +12,7 @@ module ProjectPatchGit
       unloadable # Send unloadable so it will not be unloaded in development
 
       has_one :cosmosys_project_git
+      before_save :csys_git
     end
 
   end

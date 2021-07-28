@@ -14,11 +14,9 @@ Redmine::Plugin.register :cosmosys_git do
   menu :project_menu, :cosmosys_git, {:controller => 'cosmosys_git', :action => 'menu' }, :caption => 'cosmoSysGit', :after => :activity, :param => :id
 
   settings :default => {
-    "repo_server_sync"=> true, 
     "repo_local_path"=>"/home/redmine/gitbase/csys/%project_id%", 
     "repo_server_path"=>"ssh://git@gitlab/cosmobots/%project_id%.git",
     "repo_template_id" => "template",
-    "repo_redmine_sync" => true,
     "repo_redmine_path" => "/home/redmine/gitbase/csys_rm/%project_id%.git",
     "import_path" => "01_importing/csys%project_code%.ods",
     "export_path" => "02_exporting/csys%project_code%.ods",

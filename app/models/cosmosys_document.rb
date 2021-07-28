@@ -2,63 +2,66 @@ class CosmosysDocument < ActiveRecord::Base
     belongs_to :document
   
     before_create :init_attr
-  
+
     def self.find_uploadable_template_doc(p)
-        return self.find_csys_uploadable_document(p,"template","csysTemplate","cSys")
+        return self.find_create_uploadable_import_doc(p,"template","cSysTemplate")
     end
-=begin
-=> "#<Attachment id: 2, container_id: 2, container_type: \"Document\", 
-filename: \"csysExport (7).ods\", disk_filename: \"210727114541_8d44e66729517168501d02936fa13f8e.ods\", 
-filesize: 1631996, content_type: \"application/vnd.oasis.opendocument.spreadsheet\", 
-digest: \"873e94430c0066bc1fe31b3d7975abce7248d9c28e034cef5a...\", downloads: 0, author_id: 1, 
-created_on: \"2021-07-27 11:45:41\", description: \"\", disk_directory: \"2021/07\">"
-=end    
     def self.find_uploadable_import_doc(p)
-        return self.find_csys_uploadable_document(p,"requirements","csysImport","cSys")
+        return self.find_create_uploadable_import_doc(p,"import","cSysImport")
     end
 
     private
     def init_attr
 
     end
-    def self.find_csys_uploadable_document(p,kind,title,categoryname)
+    def self.find_csys_uploadable_document(d)
         puts("+++find_csys_uploadable_document+++")
-        continue_search = true
         errorstr = nil
         retpath = nil
         retdoc = nil
         retfile = nil
-        doc_category = nil
-        p.documents.each{|d|
-            if continue_search then
-                if d.title == title then
-                    continue_search = false
-                    if doc_category == nil then
-                        doc_category = DocumentCategory.find_by_name(categoryname)
-                    end
-                    if d.category == doc_category then
-                        a = d.attachments.reverse.first
-                        if a != nil then
-                            if d.csys.imported_on == nil or a.created_on > d.csys.imported_on then
-                                retpath = a.diskfile
-                                retdoc = d
-                                retfile = a
-                            else
-                                errorstr = "Could not import the "+kind+": The newest '"+title+"' document attachment file is older ("+a.created_on.to_s+") than the last time it was imported ("+d.csys.imported_on.to_s+")"
-                            end
-                        else
-                            errorstr = "Could not import the "+kind+": The '"+title+"' document has no files attached to it"
-                        end
-                    else
-                        errorstr = "Could not import the "+kind+": The '"+title+"' document is not having the '"+categoryname+"' category."
-                    end
-                end
+        doc_cat = DocumentCategory.find_by_name("cSys")
+        if d.category != doc_cat then
+            d.category = doc_cat
+            d.save
+        end
+        a = d.attachments.reverse.first
+        if a != nil then
+            if d.csys.imported_on == nil or a.created_on > d.csys.imported_on then
+                retpath = a.diskfile
+                retdoc = d
+                retfile = a
+            else
+                errorstr = "Could not import '"+d.title+"': The newest document attachment file is older ("+a.created_on.to_s+") than the last time it was imported ("+d.csys.imported_on.to_s+")"
             end
-        }
-        if retpath == nil and errorstr == nil then
-            errorstr = "Could not import the "+kind+": in the project there must exist a document called '"+title+"' within of the '"+categoryname+"' category"
+        else
+            errorstr = "Could not import '"+d.title+"': The document has no files attached to it"
         end
         puts("ret:",retpath,"retstr:",errorstr)
         return retdoc,retfile,retpath,errorstr
     end
+
+    def self.find_create_uploadable_import_doc(p,kind,name)
+        ret = nil
+        cg = p.csys_git
+        if (cg != nil) then
+            d = p.csys_git.doc_template
+            puts "doc_temp:",d
+            if d == nil then
+                # The document does not exist or is not correctly linked
+                d = p.documents.where(title: name).first
+                if d == nil then
+                    d = p.documents.new
+                    d.title = name
+                end
+                d.category = DocumentCategory.find_by_name("cSys")
+                d.save
+                p.csys_git.doc_import = d
+            end
+            if d != nil then
+                return self.find_csys_uploadable_document(d)
+            end
+        end
+        return nil,nil,nil,"The "+kind+" does not exist in the project"        
+    end    
 end
