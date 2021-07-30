@@ -4,10 +4,10 @@ class CosmosysDocument < ActiveRecord::Base
     before_create :init_attr
 
     def self.find_uploadable_template_doc(p)
-        return self.find_create_uploadable_import_doc(p,"template","cSysTemplate")
+        return self.find_create_uploadable_doc(p,"template","cSysTemplate")
     end
     def self.find_uploadable_import_doc(p)
-        return self.find_create_uploadable_import_doc(p,"import","cSysImport")
+        return self.find_create_uploadable_doc(p,"import","cSysImport")
     end
 
     private
@@ -41,7 +41,7 @@ class CosmosysDocument < ActiveRecord::Base
         return retdoc,retfile,retpath,errorstr
     end
 
-    def self.find_create_uploadable_import_doc(p,kind,name)
+    def self.find_create_uploadable_doc(p,kind,name)
         ret = nil
         cg = p.csys_git
         if (cg != nil) then

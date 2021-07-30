@@ -203,7 +203,7 @@ class CosmosysGitController < ApplicationController
         puts("The setting exists")
         reponame = s.value["repo_template_id"]
         if (reponame != nil) then
-          ret,ignoreurl = get_expected_repo_path(reponame)
+          ret,ignoreurl = CosmosysProjectGit.get_expected_repo_path(reponame)
           if  ret != nil then
             if not(File.directory?(ret)) then
               # Create it
