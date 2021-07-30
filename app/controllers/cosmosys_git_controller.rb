@@ -818,7 +818,9 @@ class CosmosysGitController < ApplicationController
                                 dictitems.each{|key,node|
                                   changeditem = false
                                   thisitem = node['item']
-                                  thisitem.reload
+                                  if thisitem.id != nil then
+                                    thisitem.reload
+                                  end
                                   puts("EXPLORING RELATIONSHIPS OF " + key +" "+ thisitem.identifier)
                                   puts(node)
 

@@ -5,8 +5,10 @@ class CosmosysDocument < ActiveRecord::Base
 
     def self.find_uploadable_template_doc(p)
         return self.find_create_uploadable_doc(p,"template","cSysTemplate")
+        puts("+++find_uploadable_template_doc+++")
     end
     def self.find_uploadable_import_doc(p)
+        puts("+++find_uploadable_import_doc+++")
         return self.find_create_uploadable_doc(p,"import","cSysImport")
     end
 
@@ -42,11 +44,18 @@ class CosmosysDocument < ActiveRecord::Base
     end
 
     def self.find_create_uploadable_doc(p,kind,name)
+        puts("+++find_csys_uploadable_doc+++")
         ret = nil
         cg = p.csys_git
         if (cg != nil) then
-            d = p.csys_git.doc_template
-            puts "doc_temp:",d
+            if kind == "import" then
+                d = p.csys_git.doc_import
+            else
+                if kind == "template" then
+                    d = p.csys_git.doc_template
+                end
+            end
+            puts "doc_temp:",d.title
             if d == nil then
                 # The document does not exist or is not correctly linked
                 d = p.documents.where(title: name).first
