@@ -45,7 +45,11 @@ class CosmosysDocument < ActiveRecord::Base
         ret = nil
         cg = p.csys_git
         if (cg != nil) then
-            d = p.csys_git.doc_template
+            if kind == "template" then
+                d = p.csys_git.doc_template
+            else
+                d = p.csys_git.doc_import
+            end
             puts "doc_temp:",d
             if d == nil then
                 # The document does not exist or is not correctly linked
@@ -56,7 +60,11 @@ class CosmosysDocument < ActiveRecord::Base
                 end
                 d.category = DocumentCategory.find_by_name("cSys")
                 d.save
-                p.csys_git.doc_import = d
+                if kind == "template" then
+                    p.csys_git.doc_template = d
+                else
+                    p.csys_git.doc_import = d
+                end
             end
             if d != nil then
                 return self.find_csys_uploadable_document(d)

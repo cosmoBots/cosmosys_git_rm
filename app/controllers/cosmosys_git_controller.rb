@@ -818,7 +818,9 @@ class CosmosysGitController < ApplicationController
                                 dictitems.each{|key,node|
                                   changeditem = false
                                   thisitem = node['item']
-                                  thisitem.reload
+                                  if thisitem.id != nil then
+                                    thisitem.reload
+                                  end
                                   puts("EXPLORING RELATIONSHIPS OF " + key +" "+ thisitem.identifier)
                                   puts(node)
 
@@ -899,7 +901,11 @@ class CosmosysGitController < ApplicationController
                                   # Se hace en este orden para que existan las menores colisiones
                                   relations_to_add.each {|r|
                                     if r[:type] == 'parent' then
-                                      thisitem.parent = r[:item_from]
+                                      if r[:item_from].id == thisitem.id then
+                                        puts("ITEM POINTING TO ITSELF AS PARENT ---> nil ")
+                                      else
+                                        thisitem.parent = r[:item_from]
+                                      end
                                     else
                                       #print("Creo una nueva relacion")
                                       relation = r[:item_from].relations_from.new
