@@ -2,7 +2,7 @@
 
 <p>THIS WILL IMPORT DOCUMENT FROM THE REPOSITORY.</p>
 <%= form_tag({:controller => 'cosmosys_git', :action => 'import'}, :class => "tabular", :multipart => true) do %>
-  <%= textilizable("* Hint: You can upload a new import file at document:csysImport and check the option 'Import requirements file from documents section ...'") %>
+  <%= textilizable("* Hint: You can upload a new import file at document:csysImport and check the option 'Copy import file from documents ...'") %>
   <%= textilizable("* Hint: The place where the import file is found at the repo is source:\"csys|#{@project.csys_git.get_import_path[0]}\"") %>
   
   <h3>Previous steps </h3>
