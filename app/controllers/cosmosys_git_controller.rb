@@ -819,7 +819,7 @@ class CosmosysGitController < ApplicationController
                                   if thisitem.id != nil then
                                     thisitem.reload
                                   end
-                                  puts("EXPLORING RELATIONSHIPS OF " + key +" "+ thisitem.identifier)
+                                  puts("EXPLORING RELATIONSHIPS OF " + key +" "+ thisitem.csys.get_identifier)
                                   puts(node)
 
                                   relations_to_add = []
@@ -923,9 +923,9 @@ class CosmosysGitController < ApplicationController
                                   
                                   thisitem.errors.clear
                                   if (thisitem.save) then
-                                    print(thisitem.identifier+" ... relations ok\n")
+                                    print(thisitem.csys.get_identifier+" ... relations ok\n")
                                   else
-                                    print(thisitem.identifier+" ... relations nok\n")
+                                    print(thisitem.csys.get_identifier+" ... relations nok\n")
                                     thisitem.errors.full_messages.each  do |message|
                                       print("--> " + message + "\n")
                                     end
@@ -1291,7 +1291,7 @@ class CosmosysGitController < ApplicationController
                           thiskey = "ID"
                           if issuefieldlocation.key?(thiskey) then
                             sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                              issuefieldlocation[thiskey][:column]).value = i.identifier
+                              issuefieldlocation[thiskey][:column]).value = i.cys.get_identifier
                           end                          
                           thiskey = "tracker"
                           if issuefieldlocation.key?(thiskey) then
@@ -1324,7 +1324,7 @@ class CosmosysGitController < ApplicationController
                             thiskey = "parent"      
                             if issuefieldlocation.key?(thiskey) then
                               sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
-                                issuefieldlocation[thiskey][:column]).value = i.parent.identifier
+                                issuefieldlocation[thiskey][:column]).value = i.parent.cys.get_identifier
                             end
                           end
                           thiskey = "estimated_hours"
@@ -1361,7 +1361,7 @@ class CosmosysGitController < ApplicationController
                               else
                                 rlsstr = ""
                               end
-                              rlsstr += rl.issue_from.identifier
+                              rlsstr += rl.issue_from.cys.get_identifier
                             end
                             if include_blocking and (rl.relation_type == "blocks") then
                               if blkstr != nil then
@@ -1369,7 +1369,7 @@ class CosmosysGitController < ApplicationController
                               else
                                 blkstr = ""
                               end
-                              blkstr += rl.issue_from.identifier
+                              blkstr += rl.issue_from.cys.get_identifier
                             end
                             if include_related and (rl.relation_type == "relates") then
                               if relstr != nil then
@@ -1377,7 +1377,7 @@ class CosmosysGitController < ApplicationController
                               else
                                 relstr = ""
                               end
-                              relstr += rl.issue_from.identifier
+                              relstr += rl.issue_from.cys.get_identifier
                             end
                           }
                           if include_precedent and rlsstr != nil then 
