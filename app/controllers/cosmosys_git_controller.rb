@@ -448,19 +448,13 @@ class CosmosysGitController < ApplicationController
             thisrepo = thisproject.repositories.find_by_identifier("csys")
             if (thisrepo != nil) then
               thisrepo.fetch_changesets
-              puts("uno")
               thisbranchname = thisrepo.default_branch
               if (thisbranchname != nil) then
-                puts("uno2")
                 thischangesets = thisrepo.latest_changesets(relative_import_path,thisbranchname)
                 if thischangesets != nil and thischangesets.size > 0 then
-                  puts("uno3")
                   thiscommit = thischangesets.first
                   lastimporteddate = thisproject.csys_git.last_import
                   if lastimporteddate != nil then
-                    puts(thiscommit.committed_on)                        
-                    puts(">=?")
-                    puts(lastimporteddate)
                     if (lastimporteddate >= thiscommit.committed_on) then
                       uploadable_revision = false
                     end
@@ -681,7 +675,7 @@ class CosmosysGitController < ApplicationController
                                       thiskey = "subject"
                                       ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
                                       if ret != nil then
-                                        thisitem.subject = ret
+                                        thisitem.subject = convert_imported_text(ret)
                                       end                                      
 
                                       thiskey = "status"
@@ -723,7 +717,7 @@ class CosmosysGitController < ApplicationController
                                         descr = obtain_longtext(retcell)
                                         if descr != nil then
                                           puts("DESCRIPCION",descr)
-                                          thisitem.description = descr
+                                          thisitem.description = convert_imported_text(descr)
                                         end
                                       end
       
@@ -751,8 +745,12 @@ class CosmosysGitController < ApplicationController
                                         if thiskey != "rqRationale" then
                                           ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
                                           if ret != nil then
-                                              cfty = thisitem.custom_field_values.select{|a| a.custom_field_id == cf.id }.first
+                                            cfty = thisitem.custom_field_values.select{|a| a.custom_field_id == cf.id }.first
+                                            if ret.class == String then
+                                              cfty.value = convert_imported_text(ret)
+                                            else
                                               cfty.value = ret
+                                            end
                                           end
                                         else
                                           retcell = extract_cell_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
@@ -761,7 +759,7 @@ class CosmosysGitController < ApplicationController
                                             if (rational_str != nil) then
                                               puts("RATIONAL:",rational_str)
                                               cfty = thisitem.custom_field_values.select{|a| a.custom_field_id == cf.id }.first
-                                              cfty.value = rational_str
+                                              cfty.value = convert_imported_text(rational_str)
                                             end
                                           end                                          
                                         end
@@ -1498,6 +1496,42 @@ class CosmosysGitController < ApplicationController
     return ret,retstr
   end
 
+  def convert_imported_text(input_text)
+    output_text = input_text
+    
+    # First we have to convert specific OpenOffice/LibreOffice tags
+    toreplace = "<text:s/>"
+    if output_text.include?(toreplace) then
+      output_text = output_text.gsub(toreplace," ")
+    end
+    toreplace = "<text:line-break/>"
+    if output_text.include?(toreplace) then
+      puts ("!!!!!!!!! HACEMOS ALGO !!!!!!!!!!!!!")
+      output_text = output_text.gsub(toreplace,"\n")
+    end
+    # We will be converting the text until the <text:s text:c=" token does not appear
+    toreplace1 = '<text:s text:c="'
+    toreplace2 = '"/>'
+    while output_text.include?(toreplace1)
+      textindex1 = output_text.index(toreplace1)
+      output_text = output_text.sub(toreplace1,"")
+      textindex2 = output_text.index(toreplace2)
+      if textindex2 != nil then
+        number_s=output_text[textindex1..textindex2-1]
+        if number_s != nil then
+          puts("number_s: "+number_s)
+          number = number_s.to_i
+          if number != nil then
+            puts ("number: "+number.to_s)
+            output_text = output_text.sub(number_s+toreplace2," " * number)
+          end
+        end
+      end
+    end
+    # Now we have to convert HTML to text
+    return Nokogiri::HTML(output_text).text
+  end
+  
   def obtain_longtext(cell)
     ret = ""
     first = true 
