@@ -1280,7 +1280,7 @@ class CosmosysGitController < ApplicationController
 
                         # Normal Issue fields
                         currentrow = @@issuesfirstrow
-                        thisprojectissues = thisproject.issues.sort_by {|obj| obj.csys.chapter_str}
+                        thisprojectissues = thisproject.issues.sort_by {|obj| obj.csys.sortable_chapter_str}
                         thisprojectissues.each{|i|
                           puts("Processing issues ",currentrow,i)
                           thiskey = "RM#"
