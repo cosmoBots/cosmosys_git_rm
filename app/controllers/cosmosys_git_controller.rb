@@ -743,6 +743,8 @@ class CosmosysGitController < ApplicationController
                                       IssueCustomField.all.each { |cf|
                                         thiskey = cf.name
                                         puts("++++ PROCESANDO++++ "+thiskey)
+                                        # TODO: rqRational should not be hardcoded here!!!
+                                        # Please rever to the longtext type
                                         if thiskey != "rqRationale" then
                                           ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
                                           if ret != nil then
@@ -878,7 +880,7 @@ class CosmosysGitController < ApplicationController
                                       #print("Destruyo la relacion", r)
                                       removeit = false
                                       if issuefieldlocation["blocking_items"] and
-                                          r.relation_type == 'blocks' then
+                                        r.relation_type == 'blocks' then
                                         removeit = true
                                       end
                                       if not removeit and issuefieldlocation["precedent_items"] and
