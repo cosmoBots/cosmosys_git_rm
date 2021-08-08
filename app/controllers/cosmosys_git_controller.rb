@@ -1,12 +1,13 @@
 class CosmosysGitController < ApplicationController
-  before_action :find_this_project#, :authorize, :except => [:find_project, :treeview]
+  before_action :find_this_project
+  before_action :authorize
 
   def menu
     if request.get? then
       print("menu GET!!!!!")
     else
       print("menu POST!!!!!")
-    end            
+    end
   end
 
   def show

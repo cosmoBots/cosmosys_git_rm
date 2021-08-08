@@ -9,6 +9,29 @@ class CreateCosmosysDocuments < ActiveRecord::Migration[5.2]
       t.timestamp :imported_on
     end
     add_index :cosmosys_documents, :document_id
+
+		Role.all.each{|tr|
+			changed = false
+=begin      
+			if tr.permissions.include?(:view_issues) then
+				tr.permissions += [
+			
+				]
+				changed = true
+			end
+=end
+			if tr.permissions.include?(:edit_issues) then
+				tr.permissions += [
+          :csys_git_menu,
+          :csys_git_report
+				]
+				changed = true
+			end
+			if changed then
+				tr.save
+			end
+		}
+    
   end
 
   def down
