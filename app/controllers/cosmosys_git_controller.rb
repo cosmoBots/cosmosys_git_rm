@@ -1,6 +1,6 @@
 class CosmosysGitController < ApplicationController
   before_action :find_this_project
-  before_action :authorize
+  before_action :authorize, :except  => [:find_project,:menu,:import,:export]
 
   def menu
     if request.get? then
