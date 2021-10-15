@@ -466,7 +466,7 @@ for doc in reqdocs.keys():
         # because path is object not string
         path_in_str = str(path)
         filename = Path(path).name
-        documentName = filename.replace("_template","_"+reqdocs[doc]['subject'])
+        documentName = filename.replace("_template","_"+reqdocs[doc]['id'])
         success = execute_js('./plugins/cosmosys_git/assets/pythons/lib/launch_carbone.js', reporting_path+" "+path_in_str+" "+str(reqdocs[doc]['id'])+" "+documentName)
         #print(success)
 
