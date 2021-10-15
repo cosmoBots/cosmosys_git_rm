@@ -40,7 +40,7 @@ def tree_to_list(tree,parentNode):
                 node['target'] = data['targets'][str(node['fixed_version_id'])]
 
         node['tracker'] = data['trackers'][str(node['tracker_id'])]
-        node['doc'] = thisreqdoc['subject']
+        node['doc'] = thisreqdoc['id']
         purgednode = node.copy()
         purgednode['children'] = []
 
@@ -268,8 +268,8 @@ data['reqdocs']={}
 doc = data['project']['identifier']
 data['reqdocs'][doc] = {}
 data['reqdocs'][doc]['id']=doc
-data['reqdocs'][doc]['subject'] = data['project']['name']
-thisreqdoc = data['reqdocs'][doc]
+data['reqdocs'][doc]['code'] = data['project']['code']
+thisreqdoc = data['project']
 thisreqdoc['children'] = []
 thisreqdoc['chapters'] = []
 thisreqdoc['reqs'] = []
@@ -459,7 +459,7 @@ for doc in reqdocs.keys():
     #print(reqdocs[doc])
     #print(reporting_path)
     #print(str(reqdocs[doc]['id']))
-    #print(reqdocs[doc]['subject'])
+    #print(reqdocs[doc]['name'])
 
     pathlist = Path(template_path).glob('**/*_template.*')
     for path in pathlist:
