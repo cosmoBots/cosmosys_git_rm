@@ -13,8 +13,8 @@ def tree_to_list(tree,parentNode):
     for node in tree:
         node['chapters'] = []
         node['reqs'] = []
-        if 'type' in node.keys():
-            if (node['type'] == "Info"):
+        if 'rqType' in node.keys():
+            if (node['rqType'] == "Info"):
                 # Nos encontramos en un nodo del tipo informacion, para el que no vamos a 
                 # querer, posiblemente, generar tablas de atributos.  Para que Carbone
                 # pueda filtrar facilmente este tipo de datos, le anyadiremos la propiedad
@@ -264,23 +264,17 @@ my_project = data['project']
 
 #print ("Obtenemos proyecto: ", my_project['id'], " | ", my_project['name'])
 
-data['reqdocs']={}
 doc = data['project']['identifier']
-data['reqdocs'][doc] = {}
-data['reqdocs'][doc]['id']=doc
-data['reqdocs'][doc]['code'] = data['project']['code']
 thisreqdoc = data['project']
 thisreqdoc['children'] = []
 thisreqdoc['chapters'] = []
 thisreqdoc['reqs'] = []
-reqdocs = data['reqdocs']
 reqs = data['issues']
 #print("************3a*********")
 print(reqs)
 #print("************3b*********")
 thisreqdoc['children'] = reqs
-thisreqdoc['chapters'] = reqs
-thisreqdoc['reqs'] = reqs
+
 targets = data['targets']
 statuses = data['statuses']
 # Ahora vamos a generar los diagramas de jerarquía y de dependencia para cada una de los requisitos, y los guardaremos en la carpeta doc.
@@ -290,14 +284,22 @@ statuses = data['statuses']
 data['dependents'] = {}
 reqlist = tree_to_list(reqs,None)
 data['reqlist'] = reqlist
-
 data['reqclean'] = []
 
 for r in reqlist:
-    if 'type' in r.keys():
-        if r['type'] != 'Info':
+    if 'rqType' in r.keys():
+        if r['rqType'] != 'Info':
             data['reqclean'].append(r)
 
+for root in reqs:
+    print(root)
+    if len(root['children'])>0:
+        thisreqdoc['chapters'].append(root)
+    else:
+        if root['infoType']:
+            thisreqdoc['chapters'].append(root)
+        else:
+            thisreqdoc['reqs'].append(root)
 
 #print("len(reqlist)",len(reqlist))
 
@@ -453,21 +455,13 @@ with open(reporting_path + '/reqs.json', 'w') as outfile:
 from Naked.toolshed.shell import execute_js
 from pathlib import Path
 
-# js_command = 'node ' + file_path + " " + arguments
-#print(reqdocs.keys())
-for doc in reqdocs.keys():
-    #print(reqdocs[doc])
-    #print(reporting_path)
-    #print(str(reqdocs[doc]['id']))
-    #print(reqdocs[doc]['name'])
-
-    pathlist = Path(template_path).glob('**/*_template.*')
-    for path in pathlist:
-        # because path is object not string
-        path_in_str = str(path)
-        filename = Path(path).name
-        documentName = filename.replace("_template","_"+reqdocs[doc]['id'])
-        success = execute_js('./plugins/cosmosys_git/assets/pythons/lib/launch_carbone.js', reporting_path+" "+path_in_str+" "+str(reqdocs[doc]['id'])+" "+documentName)
+pathlist = Path(template_path).glob('**/*_template.*')
+for path in pathlist:
+    # because path is object not string
+    path_in_str = str(path)
+    filename = Path(path).name
+    documentName = filename.replace("_template","_"+thisreqdoc['identifier'])
+    success = execute_js('./plugins/cosmosys_git/assets/pythons/lib/launch_carbone.js', reporting_path+" "+path_in_str+" "+str(thisreqdoc['identifier'])+" "+documentName)
         #print(success)
 
 if success:
@@ -478,36 +472,3 @@ else:
     # handle failure of the JavaScript
     print("todo fue mal")
 
-# Vamos a generar el archivo JSON para crear el árbol
-
-# In[ ]:
-
-
-import json
-
-
-# Preparamos el fichero JSON que usaremos para el árbol
-
-def create_tree(current_issue):
-    #print("issue: " + current_issue['subject'])
-    descr = getattr(current_issue, 'description', current_issue['subject'])
-    tree_node = {'title': current_issue.custom_fields.get(
-        req_chapter_cf_id).value + ": " + current_issue['subject'] + ": " + current_issue.custom_fields.get(
-        req_title_cf_id).value,
-                 'subtitle': descr,
-                 'expanded': True,
-                 'children': [],
-                 }
-    chlist = redmine.issue.filter(project_id=pr_id_str, parent_id=current_issue['id'], status_id='*')
-    childrenitems = sorted(chlist, key=lambda k: k['chapter'])
-    for c in childrenitems:
-        child_issue = redmine.issue.get(c['id'])
-        child_node = create_tree(child_issue)
-        tree_node['children'].append(child_node)
-
-    return tree_node
-
-
-#print("Acabamos")
-
-# In[ ]:
