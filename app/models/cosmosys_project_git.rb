@@ -2,6 +2,7 @@ class CosmosysProjectGit < ActiveRecord::Base
     belongs_to :project
     belongs_to :doc_import, :class_name => "Document"
     belongs_to :doc_template, :class_name => "Document"
+    belongs_to :rpt_template, :class_name => "Document"
   
     before_create :init_attr
 
@@ -27,6 +28,10 @@ class CosmosysProjectGit < ActiveRecord::Base
 
     def get_export_path
         return get_setting_with_code("export_path")
+    end
+
+    def get_reporting_path
+        return get_setting_with_code("reporting_path")
     end
 
     def get_setting_with_code(str)
@@ -73,5 +78,17 @@ class CosmosysProjectGit < ActiveRecord::Base
                 self.doc_template.save
             end
         end
+        self.rpt_template = project.documents.find_by_title("cSysReportTemplate")
+        if self.rpt_template == nil then
+            self.rpt_template = self.project.documents.new
+            self.rpt_template.title = "cSysReportTemplate"
+            self.rpt_template.category = doc_cat
+            self.rpt_template.save            
+        else
+            if self.rpt_template.category != doc_cat then
+                self.rpt_template.category = doc_cat
+                self.rpt_template.save
+            end
+        end        
     end
 end
