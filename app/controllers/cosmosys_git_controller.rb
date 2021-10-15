@@ -173,9 +173,11 @@ class CosmosysGitController < ApplicationController
     ret = false
     s3,retstr,s = thisproject.csys_git.get_reporting_path
     if (s3 != nil) then
+      reportingpath = s3
       s3 = File.join(repo_folder, s3)
       s4 = s.value["reporting_template_path"]
       if (s4 != nil) then
+        templatepath = s4
         s4 = File.join(repo_folder, s4)
         previous_steps_done = true
         if report_preferences['import_template'] then
@@ -203,12 +205,10 @@ class CosmosysGitController < ApplicationController
               prot,host_with_port = obtain_project_url
               s6 = s.value["reporting_img_path"]
               if (s6 != nil) then
+                imgpath = s6
                 s6 = File.join(repo_folder, s6)
                 if (File.directory?(s6)) then
-                  imgpath = s6
                   root_url = prot+"://"+host_with_port
-                  templatepath = s4
-                  reportingpath = s3
                   # We obtain the JSON tree
                   if not (File.directory?(@@tmpdir)) then
                     require 'fileutils'
@@ -219,7 +219,7 @@ class CosmosysGitController < ApplicationController
                     treedata = @project.csys.show_as_json(nil,root_url)
                     tmpfile.write(treedata.to_json)
                     tmpfile.close
-                    comando = "python3 plugins/cosmosys_git/assets/pythons/RqReports.py #{@project.id} #{reportingpath} #{templatepath} #{imgpath} #{root_url} #{tmpfile.path}"
+                    comando = "python3 plugins/cosmosys_git/assets/pythons/RqReports.py #{@project.id} #{repo_folder} #{reportingpath} #{templatepath} #{imgpath} #{root_url} #{tmpfile.path}"
                     require 'open3'
                     print(comando)
                     stdin, stdout, stderr = Open3.popen3("#{comando}")

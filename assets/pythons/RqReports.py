@@ -227,39 +227,37 @@ def generate_diagrams(node,diagrams,ancestors,server_url,dependents):
 pr_id_str = sys.argv[1]
 #print("id: ",pr_id_str)
 
+# repo_path
+repo_path = sys.argv[2]
+#print("repo_path: ",repo_path)
+
 # reporting_path = reporting_dir
-reporting_path = sys.argv[2]
+rel_reporting_path = sys.argv[3]
+reporting_path = repo_path +'/'+sys.argv[3]
+
 #print("reporting_path: ",reporting_path)
 
 # template_path = template_dir
-template_path = sys.argv[3]
+rel_template_path = sys.argv[4]
+template_path = repo_path +'/'+sys.argv[4]
 #print("template_path: ",template_path)
 
 # img_path = img_dir
-img_path = sys.argv[4]
+rel_img_path = sys.argv[5]
+img_path = repo_path +'/'+sys.argv[5]
 #print("img_path: ",img_path)
 
 # root_url = req_server_url
-root_url = sys.argv[5]
+root_url = sys.argv[6]
 #print("root_url: ",root_url)
 
-tmpfilepath = None
-if (len(sys.argv) > 6):
-    # tmpfilepath
-    tmpfilepath = sys.argv[6]
-    #print("tmpfilepath: ",tmpfilepath)
+# tmpfilepath
+tmpfilepath = sys.argv[7]
+#print("tmpfilepath: ",tmpfilepath)
 
-if (tmpfilepath is None):
-    import json,urllib.request
-    urlfordata = root_url+"/cosmosys_reqs/"+pr_id_str+".json?key="+req_key_txt
-    #print("urlfordata: ",urlfordata)
-    datafromurl = urllib.request.urlopen(urlfordata).read().decode('utf-8')
-    data = json.loads(datafromurl)
-
-else:
-    import json
-    with open(tmpfilepath, 'r', encoding="utf-8") as tmpfile:
-        data = json.load(tmpfile)
+import json
+with open(tmpfilepath, 'r', encoding="utf-8") as tmpfile:
+    data = json.load(tmpfile)
 
 
 my_project = data['project']
@@ -325,7 +323,7 @@ self_g_d = Digraph(name="clusterD",
                      graph_attr={'labeljust': 'l', 'labelloc': 't', 'label': 'Dependences', 'margin': '5'},
                      engine='dot', node_attr={'shape': 'record', 'style': 'filled', 'URL': my_project['url']})
 
-url_base = root_url+"/projects/"+pr_id_str+"/repository/rq/revisions/master/raw/reporting/doc/"+"./img/" + my_project['identifier'] + "_"
+url_base = root_url+"/projects/"+my_project['identifier']+"/repository/csys/revisions/master/raw/" + rel_img_path +"/"+ my_project['identifier'] + "_"
 url_sufix = ".gv.svg"
 url_h = url_base +"h"+url_sufix
 url_d = url_base +"d"+url_sufix
@@ -355,7 +353,7 @@ for my_issue in reqlist:
     self_d = Digraph(name="clusterD",
                          graph_attr={'labeljust': 'l', 'labelloc': 't', 'label': 'Dependences', 'margin': '5'},
                          engine='dot', node_attr={'shape': 'record', 'style': 'filled', 'URL': my_project['url']})
-    url_base = root_url+"/projects/"+pr_id_str+"/repository/rq/revisions/master/raw/reporting/doc/"+"./img/" + str(my_issue['id']) + "_"
+    url_base = root_url+"/projects/"+my_project['identifier']+"/repository/csys/revisions/master/raw/" + rel_img_path +"/"+ str(my_issue['id']) + "_"
     url_sufix = ".gv.svg"
     url_h = url_base +"h"+url_sufix
     url_d = url_base +"d"+url_sufix
@@ -453,6 +451,7 @@ with open(reporting_path + '/reqs.json', 'w') as outfile:
 
 
 from Naked.toolshed.shell import execute_js
+from pathlib import Path
 
 # js_command = 'node ' + file_path + " " + arguments
 #print(reqdocs.keys())
@@ -461,8 +460,15 @@ for doc in reqdocs.keys():
     #print(reporting_path)
     #print(str(reqdocs[doc]['id']))
     #print(reqdocs[doc]['subject'])
-    success = execute_js('./plugins/cosmosys_git/assets/pythons/lib/launch_carbone.js', reporting_path+" "+template_path+" "+str(reqdocs[doc]['id'])+" "+reqdocs[doc]['subject'])
-    #print(success)
+
+    pathlist = Path(template_path).glob('**/*_template.*')
+    for path in pathlist:
+        # because path is object not string
+        path_in_str = str(path)
+        ext_in_str = Path(path).suffix
+        print(ext_in_str)
+        success = execute_js('./plugins/cosmosys_git/assets/pythons/lib/launch_carbone.js', reporting_path+" "+path_in_str+" "+str(reqdocs[doc]['id'])+" "+reqdocs[doc]['subject']+" "+ext_in_str)
+        #print(success)
 
 if success:
     # handle success of the JavaScript

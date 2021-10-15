@@ -10,10 +10,12 @@ var pathRoot = myArgs[0]
 //console.log('pathRoot: ', pathRoot);
 var pathTempRoot = myArgs[1]
 //console.log('pathTempRoot: ', pathTempRoot);
-var docId = myArgs[1]
+var docId = myArgs[2]
 //console.log('docId: ', docId);
-var docName = myArgs[2]
+var docName = myArgs[3]
 //console.log('docName: ', docName);
+var docExtension = myArgs[4]
+//console.log('docExtension: ', docExtension);
 
 const fs = require('fs');
 const carbone = require('carbone');
@@ -25,14 +27,10 @@ var options = {
 variableStr  : '{#doc = '+docId+'}',
 };
 
-carbone.render(pathTempRoot+'/reqs_template.odt', data, options, function(err, result){
+carbone.render(pathTempRoot, data, options, function(err, result){
 if (err) return console.log(err);
-fs.writeFileSync(pathRoot+'/'+docName+'.odt', result);
+fs.writeFileSync(pathRoot+'/'+docName+docExtension, result);
 });
 
-carbone.render(pathTempRoot+'/reqs_template.ods', data, options, function(err, result){
-if (err) return console.log(err);
-fs.writeFileSync(pathRoot+'/'+docName+'.ods', result);
-});
 
 
