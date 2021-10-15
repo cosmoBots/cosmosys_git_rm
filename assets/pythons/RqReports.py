@@ -95,13 +95,15 @@ def propagate_dependence_down(node,firstdependent,currentdependent,server_url,re
             colorstr = "red"
 
         #print("***************","entro!","*****************")
-        nodelabel = "{" + node['subject'] + "|" + node['title'] + "}"
-        diagrams[str(currentdependent)]['self_d'].node(str(node['id']), nodelabel, URL=server_url+'/issues/'+str(node['id']), tooltip=node['description'], fillcolor='grey',color=colorstr)
+        nodelabel = "{" + node['identifier'] + "|" + node['subject'] + "}"
+        #print(nodelabel,node['id'],currentdependent)
+        if str(currentdependent) in diagrams.keys():
+            diagrams[str(currentdependent)]['self_d'].node(str(node['id']), nodelabel, URL=server_url+'/issues/'+str(node['id']), tooltip=node['description'], fillcolor='grey',color=colorstr)
 
-        #print(node['id']," -> ",firstdependent," ->...-> ",currentdependent)
-        # Tebenos que añadirnos al diagraa del precursor
-        diagrams[str(currentdependent)]['self_d'].edge(str(node['id']),str(firstdependent),color="blue")
-        #print("entro")
+            #print(node['id']," -> ",firstdependent," ->...-> ",currentdependent)
+            # Tebenos que añadirnos al diagraa del precursor
+            diagrams[str(currentdependent)]['self_d'].edge(str(node['id']),str(firstdependent),color="blue")
+            #print("entro")
     
     for dep in n['relations']:
         propagate_dependence_down(node,firstdependent,dep['issue_to_id'],server_url,reqlist)
@@ -163,9 +165,10 @@ def generate_diagrams(node,diagrams,ancestors,server_url,dependents):
         else:
             colorstr = "red"
 
-        diagrams[str(r['issue_to_id'])]['self_d'].node(str(node['id']), nodelabel, URL=server_url+'/issues/'+str(node['id']), tooltip=node['description'], fillcolor='grey', color=colorstr)
+        if str(r['issue_to_id']) in diagrams.keys():
+            diagrams[str(r['issue_to_id'])]['self_d'].node(str(node['id']), nodelabel, URL=server_url+'/issues/'+str(node['id']), tooltip=node['description'], fillcolor='grey', color=colorstr)
+            diagrams[str(r['issue_to_id'])]['self_d'].edge(str(node['id']), str(r['issue_to_id']), color="blue")
 
-        diagrams[str(r['issue_to_id'])]['self_d'].edge(str(node['id']), str(r['issue_to_id']), color="blue")
         # En nuestro propio grafo añadiremos una arista hacia el nodo dependiente
         diagrams[str(node['id'])]['self_d'].edge(str(node['id']), str(r['issue_to_id']), color="blue")
 
@@ -271,7 +274,7 @@ thisreqdoc['chapters'] = []
 thisreqdoc['reqs'] = []
 reqs = data['issues']
 #print("************3a*********")
-print(reqs)
+#print(reqs)
 #print("************3b*********")
 thisreqdoc['children'] = reqs
 
@@ -292,7 +295,7 @@ for r in reqlist:
             data['reqclean'].append(r)
 
 for root in reqs:
-    print(root)
+    #print(root)
     if len(root['children'])>0:
         thisreqdoc['chapters'].append(root)
     else:
