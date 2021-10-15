@@ -14,8 +14,6 @@ var docId = myArgs[2]
 //console.log('docId: ', docId);
 var docName = myArgs[3]
 //console.log('docName: ', docName);
-var docExtension = myArgs[4]
-//console.log('docExtension: ', docExtension);
 
 const fs = require('fs');
 const carbone = require('carbone');
@@ -29,7 +27,7 @@ variableStr  : '{#doc = '+docId+'}',
 
 carbone.render(pathTempRoot, data, options, function(err, result){
 if (err) return console.log(err);
-fs.writeFileSync(pathRoot+'/'+docName+docExtension, result);
+fs.writeFileSync(pathRoot+'/'+docName, result);
 });
 
 
