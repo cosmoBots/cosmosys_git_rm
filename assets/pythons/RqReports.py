@@ -64,7 +64,7 @@ def propagate_dependence_up(node,firstdependable,currentdependable,server_url,de
     else:
         colorstr = "red"
 
-    nodelabel = "{" + node['subject'] + "|" + node['title'] + "}"
+    nodelabel = "{" + node['identifier'] + "|" + node['subject'] + "}"
     diagrams[str(currentdependable)]['self_d'].node(str(node['id']), nodelabel, URL=server_url+'/issues/'+str(node['id']), tooltip=node['description'], fillcolor='grey', color=colorstr)
 
     #print("Up: ",node['id']," <- ",firstdependable," <- ... <- ",currentdependable)
@@ -105,8 +105,10 @@ def propagate_dependence_down(node,firstdependent,currentdependent,server_url,re
             diagrams[str(currentdependent)]['self_d'].edge(str(node['id']),str(firstdependent),color="blue")
             #print("entro")
     
-    for dep in n['relations']:
-        propagate_dependence_down(node,firstdependent,dep['issue_to_id'],server_url,reqlist)
+        print("venga",n['id'])
+        for dep in n['relations']:
+            print(dep)
+            propagate_dependence_down(node,firstdependent,dep['issue_to_id'],server_url,reqlist)
 
 
 def generate_diagrams(node,diagrams,ancestors,server_url,dependents):
@@ -122,7 +124,7 @@ def generate_diagrams(node,diagrams,ancestors,server_url,dependents):
     else:
         colorstr = "red"
 
-    nodelabel = "{" + node['subject'] + "|" + node['title'] + "}"
+    nodelabel = "{" + node['identifier'] + "|" + node['subject'] + "}"
     diagrams['project']['self_h'].node(str(node['id']), nodelabel, URL=server_url+'/issues/'+str(node['id']), tooltip=node['description'], fillcolor='grey',color=colorstr)
 
     # Si tiene padre, pintaremos el vertice entre el padre y él
@@ -188,7 +190,7 @@ def generate_diagrams(node,diagrams,ancestors,server_url,dependents):
         else:
             colorstr = "red"
 
-        nodelabel = "{"+anc['subject']+"|"+anc['title']+"}"
+        nodelabel = "{"+anc['identifier']+"|"+anc['subject']+"}"
         graph.node(str(anc['id']),nodelabel,URL=server_url+'/issues/'+str(anc['id']),tooltip=anc['description'], fillcolor='grey', color=colorstr)
 
         graph.edge(str(anc['id']),str(desc['id']))
@@ -201,7 +203,7 @@ def generate_diagrams(node,diagrams,ancestors,server_url,dependents):
         else:
             colorstr = "red"
 
-        nodelabel = "{" + node['subject'] + "|" + node['title'] + "}"
+        nodelabel = "{" + node['identifier'] + "|" + node['subject'] + "}"
         graphanc.node(str(node['id']),nodelabel,URL=server_url+'/issues/'+str(node['id']),tooltip=node['description'], fillcolor='grey', color=colorstr)
 
 
@@ -374,14 +376,14 @@ for my_issue in reqlist:
     else:
         colorstr = "red"
 
-    nodelabel = "{" + my_issue['subject'] + "|" + my_issue['title'] + "}"
+    nodelabel = "{" + my_issue['identifier'] + "|" + my_issue['subject'] + "}"
     self_h.node(str(my_issue['id']), nodelabel, URL=my_project['url'] + '/issues/' + str(my_issue['id']),
         fillcolor='green', tooltip=my_issue['description'], color=colorstr)
     
 
-    title_str = my_issue['title']
+    title_str = my_issue['subject']
 
-    nodelabel = "{" + my_issue['subject'] + "|" + title_str + "}"
+    nodelabel = "{" + my_issue['identifier'] + "|" + title_str + "}"
     self_d.node(str(my_issue['id']), nodelabel, URL=my_project['url'] + '/issues/' + str(my_issue['id']), fillcolor='green',
         tooltip=my_issue['description'], color=colorstr)
 

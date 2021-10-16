@@ -216,7 +216,7 @@ class CosmosysGitController < ApplicationController
                   end              
                   tmpfile = Tempfile.new('rqdownload',@@tmpdir)
                   begin
-                    treedata = @project.csys.show_as_json(nil,root_url)
+                    treedata = @project.csys.show_as_json(nil,root_url,false)
                     tmpfile.write(treedata.to_json)
                     tmpfile.close
                     comando = "python3 plugins/cosmosys_git/assets/pythons/RqReports.py #{@project.id} #{repo_folder} #{reportingpath} #{templatepath} #{imgpath} #{root_url} #{tmpfile.path}"
