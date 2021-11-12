@@ -676,7 +676,11 @@ class CosmosysGitController < ApplicationController
                                       thiskey = "subject"
                                       ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
                                       if ret != nil then
-                                        thisitem.subject = convert_imported_text(ret)
+                                        if ret.instance_of?(String) then
+                                          thisitem.subject = convert_imported_text(ret)
+                                        else
+                                          thisitem.subject = ret.to_s
+                                        end
                                       end                                      
 
                                       thiskey = "status"
@@ -822,8 +826,9 @@ class CosmosysGitController < ApplicationController
                                   if thisitem.id != nil then
                                     thisitem.reload
                                   end
-                                  puts("EXPLORING RELATIONSHIPS OF " + key +" "+ thisitem.csys.get_identifier)
+                                  puts("EXPLORING RELATIONSHIPS OF " + key)
                                   puts(node)
+                                  puts(+"---> "+ thisitem.csys.get_identifier)
 
                                   relations_to_add = []
                                   # Parent item
