@@ -11,6 +11,10 @@ class CosmosysDocument < ActiveRecord::Base
         puts("+++find_uploadable_import_doc+++")
         return self.find_create_uploadable_doc(p,"import","cSysImport")
     end
+    def self.find_uploadable_template_report(p)
+        return self.find_create_uploadable_doc(p,"reportTemplate","cSysReportTemplate")
+        puts("+++find_uploadable_template_report+++")
+    end    
 
     private
     def init_attr
@@ -53,6 +57,10 @@ class CosmosysDocument < ActiveRecord::Base
             else
                 if kind == "template" then
                     d = p.csys_git.doc_template
+                else
+                    if kind == "reportTemplate" then
+                        d.csys_git.rpt_template
+                    end
                 end
             end
             puts "doc_temp:",d.title
@@ -68,7 +76,13 @@ class CosmosysDocument < ActiveRecord::Base
                 if kind == "template" then
                     p.csys_git.doc_template = d
                 else
-                    p.csys_git.doc_import = d
+                    if kind == "import" then
+                        p.csys_git.doc_import = d
+                    else
+                        if king == "reportTemplate" then
+                            p.csys_git.rpt_template
+                        end
+                    end
                 end
             end
             if d != nil then

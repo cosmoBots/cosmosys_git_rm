@@ -1,6 +1,32 @@
-<h2>CosmosysGitController#report</h2>
+<h2>Reporting a project file</h2>
 
-<p>THIS WILL CREATE THE REPORTS OF THE PROJECT ISSUES IN THE REPO DIRECTORY.</p>
+<p>THIS WILL OVERWRITE THE REPORT FILES AT REPOSITORY.</p>
+<%= textilizable("* Hint: You can upload a new template file at document:csysReportTemplate and check the option 'Import a new template ...'") %>
+<%= textilizable("* Hint: You can download the reported main file from source:\"csys|#{@project.csys_git.get_reporting_path[0]}\" ") %>
+<%= textilizable("* Hint: If you select to include the subprojects the reported files can be found at source:\"csys|#{File.dirname(@project.csys_git.get_reporting_path[0])}\" ") %>
+
 <%= form_tag({:controller => 'cosmosys_git', :action => 'report'}, :class => "tabular", :multipart => true) do %>
+  <h3>Previous steps </h3>
+  <p>
+    <label><%= "Import a new template from documents section to the repository" %> </label>
+    <%= check_box_tag 'report[import_template]', 1, @report['import_template'] %>
+  </p>
+
+  <h3>Report parameters </h3>
+  <p>
+    <label><%= "Include all the normal fields available" %> </label>
+    <%= check_box_tag 'report[include_fields]', 1, @report['include_fields'] %>
+  </p>
+  <p>
+    <label><%= "Include all the custom fields available" %> </label>
+    <%= check_box_tag 'report[include_cfields]', 1, @report['include_cfields'] %>
+  </p>
+  <p>
+    <label><%= "Include subprojects" %> </label>
+    <%= check_box_tag 'report[include_subprojects]', 1, @report['include_subprojects'] %>
+  </p>
+
+  <%= hidden_field_tag 'report[token]', 'VUBJKB23UIVI1UU1VOBVI@' %>
+
 <%= submit_tag l(:button_report) %>
 <% end %>

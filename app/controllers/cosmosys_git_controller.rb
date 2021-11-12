@@ -2,6 +2,8 @@ class CosmosysGitController < ApplicationController
   before_action :find_this_project
   before_action :authorize, :except  => [:find_project,:menu,:import,:export]
 
+  @@tmpdir = './tmp/cosmosys_req_plugin/'
+
   def menu
     if request.get? then
       print("menu GET!!!!!")
@@ -116,11 +118,145 @@ class CosmosysGitController < ApplicationController
   end
 
   def report
+    @report = (params[:report] || session[:report] || nil) 
+    if @report == nil then
+      @report = {}
+      @report['include_subprojects'] = false
+      @report['include_fields'] = false
+      @report['include_cfields'] = false
+      @report['import_template'] = false
+    end
+    puts @report
     if request.get? then
-      print("reports GET!!!!!")
+      puts("report GET!!!!!")
     else
-      print("reports POST!!!!!")
-    end    
+      puts("report POST!!!!!")
+      puts params[:report]
+      puts session[:report]  
+      ret = nil
+      returnmessage = ""
+      puts("Ejecuto la preparacion de gitlab")
+      check_prepare_gitlab      
+      repo_folder,remoteurl = update_create_repo_folder(@project)
+      if repo_folder != nil then
+        retvalue,retstr = report_project_repo(repo_folder,@report,@project)
+        if (retvalue) then
+          ret = commit_push_report_repo(repo_folder,@report['include_subprojects'],@report['import_template'])
+          if (ret) then
+            rm_mirror_folder = update_create_repo_rm_mirror(remoteurl,@project)
+            if rm_mirror_folder != nil then
+              returnmessage += "Everything went OK"
+            else
+              ret = false
+              returnmessage += "Problems creating the mirror Redmine repo"
+            end
+          else
+            returnmessage += "Problems commiting/pushing the Git repo"
+          end
+        else
+          returnmessage += retstr
+        end
+      else
+        returnmessage += "Could not create/update the repo folder"
+      end
+      if (ret != nil and ret == true) then
+        flash.now[:notice] = returnmessage
+      else
+        flash.now[:error] = returnmessage
+      end
+      session[:report] = @report
+    end
+  end
+
+  def report_project_repo(repo_folder,report_preferences,thisproject)
+    @output = []
+    ret = false
+    s3,retstr,s = thisproject.csys_git.get_reporting_path
+    if (s3 != nil) then
+      reportingpath = s3
+      s3 = File.join(repo_folder, s3)
+      s4 = s.value["reporting_template_path"]
+      if (s4 != nil) then
+        templatepath = s4
+        s4 = File.join(repo_folder, s4)
+        previous_steps_done = true
+        if report_preferences['import_template'] then
+          previous_steps_done = false
+          d,a,s5,retstr = CosmosysDocument.find_uploadable_template_report(thisproject)
+          if s5 != nil then
+            # We copy the template over the last report file
+            comando = "cp #{s5} #{s4}/"
+            puts("\n\n #{comando}")
+            output = `#{comando}`
+            puts(output)
+            if (File.file?(File.join(s4,s5))) then
+              puts(s5," copied successfully to ",s4)
+              previous_steps_done = true
+              d.csys.imported_on = Time.now
+              d.csys.save
+            else
+              retstr = "We could not load the new report template"
+            end
+          end
+        end
+        if (previous_steps_done) then
+          if (File.directory?(s4)) then
+            if (File.directory?(s3)) then
+              prot,host_with_port = obtain_project_url
+              s6 = s.value["reporting_img_path"]
+              if (s6 != nil) then
+                imgpath = s6
+                s6 = File.join(repo_folder, s6)
+                if (File.directory?(s6)) then
+                  root_url = prot+"://"+host_with_port
+                  # We obtain the JSON tree
+                  if not (File.directory?(@@tmpdir)) then
+                    require 'fileutils'
+                    FileUtils.mkdir_p @@tmpdir
+                  end              
+                  tmpfile = Tempfile.new('rqdownload',@@tmpdir)
+                  begin
+                    treedata = @project.csys.show_as_json(nil,root_url,false)
+                    tmpfile.write(treedata.to_json)
+                    tmpfile.close
+                    comando = "python3 plugins/cosmosys_git/assets/pythons/RqReports.py #{@project.id} #{repo_folder} #{reportingpath} #{templatepath} #{imgpath} #{root_url} #{tmpfile.path}"
+                    require 'open3'
+                    print(comando)
+                    stdin, stdout, stderr = Open3.popen3("#{comando}")
+                    stdin.close
+                    stdout.each do |ele|
+                      if ele != nil then
+                        print ("->"+ele+"\n")
+                        @output << ele
+                      end
+                    end
+                    puts("acabo el comando")
+                    ret = true
+                  ensure
+                    #tmpfile.unlink   # deletes the temp file
+                  end
+                else
+                  retstr = "The reporting image path does not exist: "+s6
+                end
+              else
+                retstr = "The setting for the reporting img path does not exist: reporting_img_path"
+              end
+            else
+              retstr = "The reporting directory does not exist"
+            end
+          else
+            retstr = "The template directory does not exist: "+s4
+          end
+        end
+      else
+        retstr = "The setting for the template file does not exist: reporting_template_path"
+      end            
+    else
+      retstr = "The setting for the reporting path does not exist: reporting_path"
+    end
+    puts("ret:",ret)
+    puts("retstr:",retstr)
+    return ret,retstr
   end
 
   private
@@ -157,7 +293,7 @@ class CosmosysGitController < ApplicationController
   def commit_push_export_repo(repo_folder,including_subprojects = false, import_template = false)
     commit_str = "[csys bot] "
     if import_template
-      commit_str += "Import_template +"
+      commit_str += "Export_template +"
     end
     commit_str +=" Export executed"
     if including_subprojects
@@ -169,6 +305,23 @@ class CosmosysGitController < ApplicationController
     `#{comando}`
     return true
   end
+
+  def commit_push_report_repo(repo_folder,including_subprojects = false, import_template = false)
+    commit_str = "[csys bot] "
+    if import_template
+      commit_str += "Report_template +"
+    end
+    commit_str +=" Report executed"
+    if including_subprojects
+      commit_str += "+ including subprojects"
+    end
+
+    comando = "cd #{repo_folder}; git add .;git commit -m \""+commit_str+"\";git push --all"
+    puts("\n\n #{comando}")
+    `#{comando}`
+    return true
+  end
+
   def check_create_gitlab_prj(gitlabconfig, prj_identifier, ssh_url)
     puts("+++++++check_create_gitlab_prj++++++++")    
     Gitlab.configure do |config|
@@ -255,6 +408,7 @@ class CosmosysGitController < ApplicationController
           remoteurl = s.value["repo_server_path"].gsub("%project_id%",ret)
           puts("Template shall be cloned from "+remoteurl)
           path_folder = File.expand_path("..", repo_folder)
+          puts("The path_folder to create is "+path_folder)
           if not(File.directory?(path_folder)) then
             # Create it
             FileUtils.mkdir_p path_folder
@@ -285,6 +439,7 @@ class CosmosysGitController < ApplicationController
     puts("+++++++update_create_repo_folder++++++++")                
     # Chec if repo folder exists
     repo_folder,remote_url,s = CosmosysProjectGit.get_expected_repo_path(thisproject.identifier)
+    puts("The repofolder is "+repo_folder)
     if  repo_folder != nil then
       if not(File.directory?(repo_folder)) then
         # The folder does not exist, we need to pull it from the template repo
@@ -988,6 +1143,62 @@ class CosmosysGitController < ApplicationController
     return retvalue,retstr
   end
 
+  def obtain_project_url
+    s = Setting.find_by_name("host_name")
+    p = Setting.find_by_name("protocol")
+    prot = nil
+    if s == nil or p == nil then
+      splitted_url = request.fullpath.split('/cosmosys_reqs')
+      print("\nsplitted_url: ",splitted_url)
+      root_url = splitted_url[0]
+      print("\nroot_url: ",root_url)
+      print("\nbase_url: ",request.base_url)
+      print("\nurl: ",request.url)
+      print("\noriginal: ",request.original_url)
+      print("\nhost: ",request.host)
+      print("\nhost wp: ",request.host_with_port)
+      print("\nfiltered_path: ",request.filtered_path)
+      print("\nfullpath: ",request.fullpath)
+      print("\npath_translated: ",request.path_translated)
+      print("\noriginal_fullpath ",request.original_fullpath)
+      print("\nserver_name ",request.server_name)
+      print("\noriginal_fullpath ",request.original_fullpath)
+      print("\npath ",request.path)
+      print("\nserver_addr ",request.server_addr)
+      print("\nhost ",request.host)
+      print("\nremote_host ",request.remote_host)
+
+      if s == nil then
+        s = Setting.new
+        s.name = "host_name"
+        s.value = request.host_with_port
+        s.save
+      end
+      if p == nil then
+        p = Setting.new
+        p.name = "protocol"
+        prot = request.protocol
+        if prot == "http://" then
+          p.value =  "http"
+          prot = p.value                          
+          p.save
+        else
+          if prot == "https://" then
+            p.value = "https"
+            prot = p.value                          
+            p.save
+          else
+            puts "Unknown protocol "+prot+" can not save the Redmine setting"
+          end
+        end
+      end
+    else
+      prot = p.value
+    end
+    return p.value,s.value
+  end
+
+
   def export_project_repo(repo_folder,export_preferences,thisproject)
     ret = false
     s3,retstr,s = thisproject.csys_git.get_export_path
@@ -1035,60 +1246,9 @@ class CosmosysGitController < ApplicationController
                       if extrasheet != nil then
 
                         # DICT SHEET ###################
-                        s = Setting.find_by_name("host_name")
-                        p = Setting.find_by_name("protocol")
-                        prot = nil
-                        if s == nil or p == nil then
-                          splitted_url = request.fullpath.split('/cosmosys_reqs')
-                          print("\nsplitted_url: ",splitted_url)
-                          root_url = splitted_url[0]
-                          print("\nroot_url: ",root_url)
-                          print("\nbase_url: ",request.base_url)
-                          print("\nurl: ",request.url)
-                          print("\noriginal: ",request.original_url)
-                          print("\nhost: ",request.host)
-                          print("\nhost wp: ",request.host_with_port)
-                          print("\nfiltered_path: ",request.filtered_path)
-                          print("\nfullpath: ",request.fullpath)
-                          print("\npath_translated: ",request.path_translated)
-                          print("\noriginal_fullpath ",request.original_fullpath)
-                          print("\nserver_name ",request.server_name)
-                          print("\noriginal_fullpath ",request.original_fullpath)
-                          print("\npath ",request.path)
-                          print("\nserver_addr ",request.server_addr)
-                          print("\nhost ",request.host)
-                          print("\nremote_host ",request.remote_host)
+                        prot,host_with_port = obtain_project_url
 
-                          if s == nil then
-                            s = Setting.new
-                            s.name = "host_name"
-                            s.value = request.host_with_port
-                            s.save
-                          end
-                          if p == nil then
-                            p = Setting.new
-                            p.name = "protocol"
-                            prot = request.protocol
-                            if prot == "http://" then
-                              p.value =  "http"
-                              prot = p.value                          
-                              p.save
-                            else
-                              if prot == "https://" then
-                                p.value = "https"
-                                prot = p.value                          
-                                p.save
-                              else
-                                puts "Unknown protocol "+prot+" can not save the Redmine setting"
-                              end
-                            end
-                          end
-                        else
-                          prot = p.value
-                        end
-
-
-                        dictsheet.cell(@@rmserverurlcell[0],@@rmserverurlcell[1]).value = prot+"://"+s.value
+                        dictsheet.cell(@@rmserverurlcell[0],@@rmserverurlcell[1]).value = prot+"://"+host_with_port
                         dictsheet.cell(@@rmkeycell[0],@@rmkeycell[1]).value = "my API Key?"
                         dictsheet.cell(@@rmprojectidcell[0],@@rmprojectidcell[1]).value = thisproject.identifier
                         dictsheet.cell(@@projectcodecell[0],@@projectcodecell[1]).value = thisproject.code

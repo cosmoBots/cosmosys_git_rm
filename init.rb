@@ -10,6 +10,7 @@ Redmine::Plugin.register :cosmosys_git do
 
   permission :csys_git_menu, :cosmosys_git => :menu
   permission :csys_git_report, :cosmosys_git => :report
+  permission :csys_git_export, :cosmosys_git => :export
 
   menu :project_menu, :cosmosys_git, {:controller => 'cosmosys_git', :action => 'menu' }, :caption => 'cosmoSysGit', :after => :activity, :param => :id
 
