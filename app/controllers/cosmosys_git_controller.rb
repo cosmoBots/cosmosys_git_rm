@@ -907,11 +907,14 @@ class CosmosysGitController < ApplicationController
                                         if thiskey != "rqRationale" then
                                           ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
                                           if ret != nil then
+                                            puts(ret)
                                             cfty = thisitem.custom_field_values.select{|a| a.custom_field_id == cf.id }.first
-                                            if ret.class == String then
-                                              cfty.value = convert_imported_text(ret)
-                                            else
-                                              cfty.value = ret
+                                            if cfty != nil then
+                                              if ret.class == String then
+                                                cfty.value = convert_imported_text(ret)
+                                              else
+                                                cfty.value = ret
+                                              end
                                             end
                                           end
                                         else
@@ -921,7 +924,9 @@ class CosmosysGitController < ApplicationController
                                             if (rational_str != nil) then
                                               puts("RATIONAL:",rational_str)
                                               cfty = thisitem.custom_field_values.select{|a| a.custom_field_id == cf.id }.first
-                                              cfty.value = convert_imported_text(rational_str)
+                                              if cfty != nil then
+                                                cfty.value = convert_imported_text(rational_str)
+                                              end
                                             end
                                           end                                          
                                         end

@@ -59,7 +59,7 @@ class CosmosysDocument < ActiveRecord::Base
                     d = p.csys_git.doc_template
                 else
                     if kind == "reportTemplate" then
-                        d.csys_git.rpt_template
+                        d = p.csys_git.rpt_template
                     end
                 end
             end
@@ -80,7 +80,7 @@ class CosmosysDocument < ActiveRecord::Base
                         p.csys_git.doc_import = d
                     else
                         if king == "reportTemplate" then
-                            p.csys_git.rpt_template
+                            p.csys_git.rpt_template = d
                         end
                     end
                 end
