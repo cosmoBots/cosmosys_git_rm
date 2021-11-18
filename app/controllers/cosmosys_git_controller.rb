@@ -179,18 +179,19 @@ class CosmosysGitController < ApplicationController
       if (s4 != nil) then
         templatepath = s4
         s4 = File.join(repo_folder, s4)
+        puts("report_project_repo s4 =",s4,"s3 =",s3)
         previous_steps_done = true
         if report_preferences['import_template'] then
           previous_steps_done = false
           d,a,s5,retstr = CosmosysDocument.find_uploadable_template_report(thisproject)
           if s5 != nil then
+            s9 = File.join(s4,a.filename)
             # We copy the template over the last report file
-            comando = "cp #{s5} #{s4}/"
-            puts("\n\n #{comando}")
+            comando = "cp #{s5} #{s9}"
             output = `#{comando}`
             puts(output)
-            if (File.file?(File.join(s4,File.basename(s5)))) then
-              puts(s5," copied successfully to ",s4)
+            if (File.file?(s9)) then
+              puts(s5," copied successfully to ",s9)
               previous_steps_done = true
               d.csys.imported_on = Time.now
               d.csys.save

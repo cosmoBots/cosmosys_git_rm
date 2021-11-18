@@ -33,10 +33,13 @@ class CosmosysDocument < ActiveRecord::Base
         end
         a = d.attachments.reverse.first
         if a != nil then
-            if d.csys.imported_on == nil or a.created_on > d.csys.imported_on then
+            if true or d.csys.imported_on == nil or a.created_on > d.csys.imported_on then
                 retpath = a.diskfile
+                puts("retpath =",retpath)
                 retdoc = d
+                puts("retdoc =",retpath)
                 retfile = a
+                puts("retfile =",retpath)
             else
                 errorstr = "Could not import '"+d.title+"': The newest document attachment file is older ("+a.created_on.to_s+") than the last time it was imported ("+d.csys.imported_on.to_s+")"
             end
