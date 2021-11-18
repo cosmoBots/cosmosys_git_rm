@@ -33,7 +33,7 @@ class CosmosysDocument < ActiveRecord::Base
         end
         a = d.attachments.reverse.first
         if a != nil then
-            if true or d.csys.imported_on == nil or a.created_on > d.csys.imported_on then
+            if d.csys.imported_on == nil or a.created_on > d.csys.imported_on then
                 retpath = a.diskfile
                 puts("retpath =",retpath)
                 retdoc = d
