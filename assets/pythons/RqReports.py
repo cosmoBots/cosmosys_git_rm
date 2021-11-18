@@ -460,14 +460,13 @@ with open(reporting_path + '/reqs.json', 'w') as outfile:
 from Naked.toolshed.shell import execute_js
 from pathlib import Path
 
-pathlist = Path(template_path).glob('**/*_template.*')
+pathlist = Path(template_path).glob('**/*_template*')
 for path in pathlist:
     # because path is object not string
     path_in_str = str(path)
     filename = Path(path).name
     documentName = filename.replace("_template","_"+thisreqdoc['identifier'])
     success = execute_js('./plugins/cosmosys_git/assets/pythons/lib/launch_carbone.js', reporting_path+" "+path_in_str+" "+str(thisreqdoc['identifier'])+" "+documentName)
-        #print(success)
 
 if success:
     # handle success of the JavaScript

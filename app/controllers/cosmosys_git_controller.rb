@@ -189,7 +189,7 @@ class CosmosysGitController < ApplicationController
             puts("\n\n #{comando}")
             output = `#{comando}`
             puts(output)
-            if (File.file?(File.join(s4,s5))) then
+            if (File.file?(File.join(s4,File.basename(s5)))) then
               puts(s5," copied successfully to ",s4)
               previous_steps_done = true
               d.csys.imported_on = Time.now
