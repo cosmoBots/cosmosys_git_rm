@@ -14,9 +14,9 @@ class AddRqtTemplate < ActiveRecord::Migration[5.2]
         cpg.rpt_template.category = doc_cat
         cpg.rpt_template.save
       else
-        if cpg.rpt_template_category != doc_cat then
+        if cpg.rpt_template.category != doc_cat then
           cpg.rpt_template.category = doc_cat
-          pg.rpt_template.save
+          cpg.rpt_template.save
         end
       end
     }

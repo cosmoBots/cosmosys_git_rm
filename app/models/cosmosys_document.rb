@@ -48,7 +48,7 @@ class CosmosysDocument < ActiveRecord::Base
     end
 
     def self.find_create_uploadable_doc(p,kind,name)
-        puts("+++find_csys_uploadable_doc+++")
+        puts("+++find_csys_uploadable_doc+++"+kind)
         ret = nil
         cg = p.csys_git
         if (cg != nil) then
@@ -60,6 +60,12 @@ class CosmosysDocument < ActiveRecord::Base
                 else
                     if kind == "reportTemplate" then
                         d = p.csys_git.rpt_template
+                        if d == nil then
+                            # Try to recover from unconsistent installation
+                            p.csys_git.rpt_template = p.documents.find_by_title("cSysReportTemplate")
+                            p.csys_git.save
+                            d = p.csys_git.rpt_template
+                        end
                     end
                 end
             end
