@@ -997,9 +997,16 @@ class CosmosysGitController < ApplicationController
                                   if issuefieldlocation["parent"] then
                                       parentid = node['parent']
                                     if (parentid != nil and parentid.size > 0) then
-                                      thisparentitem = dictitems[parentid]['item']
+                                      # Maybe the parent is not in the same spreadsheet
+                                      if dictitems.key?(parentid) then
+                                        thisparentitem = dictitems[parentid]['item']
+                                      else
+                                        thisparentitem = nil
+                                        puts("the parent issue ",parentid," can not be found in the same import document, partial file load?")
+                                      end 
                                       if (thisparentitem == nil) then
                                         thisparentitem = thisproject.csys.find_issue_by_identifier(parentid)
+                                        dictitems[parentid]['item'] = thisparentitem
                                       end
                                       if (thisparentitem != nil) then
                                         if thisitem.parent != thisparentitem then
@@ -1008,6 +1015,7 @@ class CosmosysGitController < ApplicationController
                                       else
                                         puts("the parent issue ",parentid," does not exist")
                                       end
+
                                     else
                                       # The column exists, and it is void.
                                       # If it exists, we have to remove the parent relationship
