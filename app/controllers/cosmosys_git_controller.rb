@@ -802,7 +802,7 @@ class CosmosysGitController < ApplicationController
                                       if thisfield != nil then 
                                         thisident = thisfield.value
                                         if thisident != nil then
-                                          thisitem = thisproject.csys.find_issue_by_identifier(thisident)
+                                          thisitem = thisproject.csys.find_issue_by_identifier(thisident,true)
                                           if (thisitem == nil) then
                                             puts("NO LO ENCONTRAMOS!!!!"+thisident)
                                             thisitem = thisproject.issues.new
@@ -1005,7 +1005,7 @@ class CosmosysGitController < ApplicationController
                                         puts("the parent issue ",parentid," can not be found in the same import document, partial file load?")
                                       end 
                                       if (thisparentitem == nil) then
-                                        thisparentitem = thisproject.csys.find_issue_by_identifier(parentid)
+                                        thisparentitem = thisproject.csys.find_issue_by_identifier(parentid,true)
                                         dictitems[parentid]['item'] = thisparentitem
                                       end
                                       if (thisparentitem != nil) then
