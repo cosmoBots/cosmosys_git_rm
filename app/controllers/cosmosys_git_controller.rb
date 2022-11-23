@@ -1006,7 +1006,11 @@ class CosmosysGitController < ApplicationController
                                       end 
                                       if (thisparentitem == nil) then
                                         thisparentitem = thisproject.csys.find_issue_by_identifier(parentid,true)
-                                        dictitems[parentid]['item'] = thisparentitem
+                                        if (thisparentitem == nil) then
+                                          # In case we are importing a partial file load, the parent item can be located at the parent project, let's search for it
+                                          thisparentitem = thisproject.parent.csys.find_issue_by_identifier(parentid,true)
+                                          dictitems[parentid]['item'] = thisparentitem
+                                        end
                                       end
                                       if (thisparentitem != nil) then
                                         if thisitem.parent != thisparentitem then
