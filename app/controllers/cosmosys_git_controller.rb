@@ -989,7 +989,8 @@ class CosmosysGitController < ApplicationController
                                   end
                                   puts("EXPLORING RELATIONSHIPS OF " + key)
                                   puts(node)
-                                  puts(+"---> "+ thisitem.csys.get_identifier)
+                                  # This causes a failure when importing a void item
+                                  # puts(+"---> "+ thisitem.csys.get_identifier)
 
                                   relations_to_add = []
                                   # Parent item
