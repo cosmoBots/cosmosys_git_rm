@@ -649,11 +649,19 @@ class CosmosysGitController < ApplicationController
                           while (currentrow <= lastrow) do
                             thisitem = dictsheet.cell(currentrow,@@trackerscolumn)
                             if thisitem != nil and thisitem.value != nil then
-                              element = Tracker.find_by_name(thisitem.value)
+                              element = thisproject.trackers.find_by_name(thisitem.value)
                               if element == nil then
-                                retstr += "The tracker "+thisitem.value+" does not exist" 
-                                errorfound = true
-                              end
+                                retstr += "The tracker "+thisitem.value+" is not present in the current project, adding it?" 
+                                element = Tracker.find_by_name(thisitem.value)
+                                if element == nil then
+                                  retstr += "The tracker "+thisitem.value+" does not exist" 
+                                  errorfound = true
+                                else
+                                  thisproject.trackers << element
+                                  thisproject.save
+                                end
+                             end
+
                             end
                             currentrow += 1
                             #puts("tracker row",currentrow)
@@ -939,7 +947,7 @@ class CosmosysGitController < ApplicationController
                                         puts(thisitem.inspect)
                                         saved = thisitem.save
                                         puts thisitem.errors.full_messages                                
-                                        puts("item saved:" + saved)
+                                        puts("item saved:" + saved.to_s)
                                         retvalue = retvalue and saved
                                       end
 
@@ -1752,7 +1760,7 @@ class CosmosysGitController < ApplicationController
       if thisfield != nil then 
         ret = thisfield
       else
-        puts("the row " + row_i + " does not have a " + k + " field")                                    
+        puts("the row " + row_i.to_s + " does not have a " + k + " field")                                    
       end
     end
     return ret
@@ -1764,7 +1772,7 @@ class CosmosysGitController < ApplicationController
     if thisfield != nil then 
       ret = thisfield.value
       if ret == nil then
-        puts("the row " + row_i + " does not have a " + k + " value")
+        puts("the row " + row_i.to_s + " does not have a " + k + " value")
       end
     end
     return ret
