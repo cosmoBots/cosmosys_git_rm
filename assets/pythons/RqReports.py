@@ -466,6 +466,7 @@ for path in pathlist:
     path_in_str = str(path)
     filename = Path(path).name
     documentName = filename.replace("_template","_"+thisreqdoc['identifier'])
+    print('./plugins/cosmosys_git/assets/pythons/lib/launch_carbone.js', reporting_path+" "+path_in_str+" "+str(thisreqdoc['identifier'])+" "+documentName)
     success = execute_js('./plugins/cosmosys_git/assets/pythons/lib/launch_carbone.js', reporting_path+" "+path_in_str+" "+str(thisreqdoc['identifier'])+" "+documentName)
 
 if success:
