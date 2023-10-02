@@ -567,10 +567,8 @@ class CosmosysGitController < ApplicationController
       previous_steps_done = true
       if import_preferences['from_documents']  then
         previous_steps_done = false
-        puts("Dos1")
         d,a,s4,retstr = CosmosysDocument.find_uploadable_import_doc(thisproject)
         if s4 != nil then
-          puts("Dos2")
           # We copy the template over the last import file
           comando = "cp #{s4} #{s3}"
           puts("\n\n #{comando}")
@@ -626,12 +624,12 @@ class CosmosysGitController < ApplicationController
               end
             end
             if (uploadable_revision) then
-              dictsheet = book.worksheets('Dict')
+                          dictsheet = book.worksheets('Dict')
               if (dictsheet != nil) then
                 issuessheet = book.worksheets('Items')
                 if (issuessheet != nil) then
                   extrasheet = book.worksheets('ExtraFields')
-                  puts("+++++++EXTRA FIELDS++++++++++")
+                  # puts("+++++++EXTRA FIELDS++++++++++")
                   if extrasheet != nil then
                     # DICT SHEET ###################
                     if (dictsheet.cell(@@rmprojectidcell[0],@@rmprojectidcell[1]).value != thisproject.identifier) then
@@ -651,11 +649,19 @@ class CosmosysGitController < ApplicationController
                           while (currentrow <= lastrow) do
                             thisitem = dictsheet.cell(currentrow,@@trackerscolumn)
                             if thisitem != nil and thisitem.value != nil then
-                              element = Tracker.find_by_name(thisitem.value)
+                              element = thisproject.trackers.find_by_name(thisitem.value)
                               if element == nil then
-                                retstr += "The tracker "+thisitem.value+" does not exist" 
-                                errorfound = true
-                              end
+                                retstr += "The tracker "+thisitem.value+" is not present in the current project, adding it?" 
+                                element = Tracker.find_by_name(thisitem.value)
+                                if element == nil then
+                                  retstr += "The tracker "+thisitem.value+" does not exist" 
+                                  errorfound = true
+                                else
+                                  thisproject.trackers << element
+                                  thisproject.save
+                                end
+                             end
+
                             end
                             currentrow += 1
                             #puts("tracker row",currentrow)
@@ -782,8 +788,8 @@ class CosmosysGitController < ApplicationController
                               index += 1
                             }
 
-                            puts("++++++ LOCATION +++++++++")
-                            puts(issuefieldlocation)
+                            # puts("++++++ LOCATION +++++++++")
+                            # puts(issuefieldlocation)
 
                             lastrow = dictsheet.cell(@@issueslastrow[0],@@issueslastrow[1]).value
                             if lastrow != nil and lastrow != "" then
@@ -804,13 +810,13 @@ class CosmosysGitController < ApplicationController
                                         if thisident != nil then
                                           thisitem = thisproject.csys.find_issue_by_identifier(thisident,true)
                                           if (thisitem == nil) then
-                                            puts("NO LO ENCONTRAMOS!!!!"+thisident)
+                                            puts("NO LO ENCONTRAMOS!!!!")
                                             thisitem = thisproject.issues.new
                                           end
                                           dictitems[thisident] = {}
                                           dictitems[thisident]['item'] = thisitem
                                         else
-                                          puts("the row ",currentrow," does not have an ID")
+                                          puts("the row " + currentrow + " does not have an ID")
                                         end
                                       end
                                     end
@@ -877,7 +883,7 @@ class CosmosysGitController < ApplicationController
                                       if retcell != nil then
                                         descr = obtain_longtext(retcell)
                                         if descr != nil then
-                                          puts("DESCRIPCION",descr)
+                                          # puts("DESCRIPCION",descr)
                                           thisitem.description = convert_imported_text(descr)
                                         end
                                       end
@@ -902,13 +908,13 @@ class CosmosysGitController < ApplicationController
 
                                       IssueCustomField.all.each { |cf|
                                         thiskey = cf.name
-                                        puts("++++ PROCESANDO++++ "+thiskey)
+                                        # puts("++++ PROCESANDO++++ "+thiskey)
                                         # TODO: rqRational should not be hardcoded here!!!
                                         # Please rever to the longtext type
                                         if thiskey != "rqRationale" then
                                           ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
                                           if ret != nil then
-                                            puts(ret)
+                                            # puts(ret)
                                             cfty = thisitem.custom_field_values.select{|a| a.custom_field_id == cf.id }.first
                                             if cfty != nil then
                                               if ret.class == String then
@@ -923,7 +929,7 @@ class CosmosysGitController < ApplicationController
                                           if retcell != nil then
                                             rational_str = obtain_longtext(retcell)
                                             if (rational_str != nil) then
-                                              puts("RATIONAL:",rational_str)
+                                              # puts("RATIONAL:",rational_str)
                                               cfty = thisitem.custom_field_values.select{|a| a.custom_field_id == cf.id }.first
                                               if cfty != nil then
                                                 cfty.value = convert_imported_text(rational_str)
@@ -941,7 +947,7 @@ class CosmosysGitController < ApplicationController
                                         puts(thisitem.inspect)
                                         saved = thisitem.save
                                         puts thisitem.errors.full_messages                                
-                                        puts("grabamos",saved)
+                                        puts("item saved:" + saved.to_s)
                                         retvalue = retvalue and saved
                                       end
 
@@ -979,7 +985,7 @@ class CosmosysGitController < ApplicationController
                                     end
                                   end
                                   currentrow += 1
-                                  puts("next row",currentrow)
+                                  # puts("next row",currentrow)
                                 end
                                 dictitems.each{|key,node|
                                   changeditem = false
@@ -987,8 +993,8 @@ class CosmosysGitController < ApplicationController
                                   if thisitem.id != nil then
                                     thisitem.reload
                                   end
-                                  puts("EXPLORING RELATIONSHIPS OF " + key)
-                                  puts(node)
+                                  # puts("EXPLORING RELATIONSHIPS OF " + key)
+                                  # puts(node)
                                   # This causes a failure when importing a void item
                                   # puts(+"---> "+ thisitem.csys.get_identifier)
 
@@ -1003,7 +1009,7 @@ class CosmosysGitController < ApplicationController
                                         thisparentitem = dictitems[parentid]['item']
                                       else
                                         thisparentitem = nil
-                                        puts("the parent issue ",parentid," can not be found in the same import document, partial file load?")
+                                        # puts("the parent issue ",parentid," can not be found in the same import document, partial file load?")
                                       end 
                                       if (thisparentitem == nil) then
                                         thisparentitem = thisproject.csys.find_issue_by_identifier(parentid,true)
@@ -1107,7 +1113,7 @@ class CosmosysGitController < ApplicationController
                                   if (thisitem.save) then
                                     print(thisitem.csys.get_identifier+" ... relations ok\n")
                                   else
-                                    print(thisitem.csys.get_identifier+" ... relations nok\n")
+                                    # print(thisitem.csys.get_identifier+" ... relations nok\n")
                                     thisitem.errors.full_messages.each  do |message|
                                       print("--> " + message + "\n")
                                     end
@@ -1158,7 +1164,7 @@ class CosmosysGitController < ApplicationController
     else
       retstr = "The setting for the exporting path does not exist: export_path"
     end
-    puts("retorno",retvalue,retstr)
+    # puts("retorno",retvalue,retstr)
     return retvalue,retstr
   end
 
@@ -1261,7 +1267,7 @@ class CosmosysGitController < ApplicationController
                     issuessheet = book.worksheets('Items')
                     if (issuessheet != nil) then
                       extrasheet = book.worksheets('ExtraFields')
-                      puts("+++++++EXTRA FIELDS++++++++++")
+                      # puts("+++++++EXTRA FIELDS++++++++++")
                       if extrasheet != nil then
 
                         # DICT SHEET ###################
@@ -1461,15 +1467,15 @@ class CosmosysGitController < ApplicationController
                             end
                           }
                         end
-                        puts("++++++ LOCATION +++++++++")
-                        puts(issuefieldlocation)
+                        #puts("++++++ LOCATION +++++++++")
+                        #puts(issuefieldlocation)
 
 
                         # Normal Issue fields
                         currentrow = @@issuesfirstrow
                         thisprojectissues = thisproject.issues.sort_by {|obj| obj.csys.sortable_chapter_str}
                         thisprojectissues.each{|i|
-                          puts("Processing issues ",currentrow,i)
+                          # puts("Processing issues ",currentrow,i)
                           thiskey = "RM#"
                           if issuefieldlocation.key?(thiskey) then
                             sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
@@ -1693,7 +1699,7 @@ class CosmosysGitController < ApplicationController
     end
     toreplace = "<text:line-break/>"
     if output_text.include?(toreplace) then
-      puts ("!!!!!!!!! HACEMOS ALGO !!!!!!!!!!!!!")
+      # puts ("!!!!!!!!! HACEMOS ALGO !!!!!!!!!!!!!")
       output_text = output_text.gsub(toreplace,"\n")
     end
     # We will be converting the text until the <text:s text:c=" token does not appear
@@ -1706,10 +1712,10 @@ class CosmosysGitController < ApplicationController
       if textindex2 != nil then
         number_s=output_text[textindex1..textindex2-1]
         if number_s != nil then
-          puts("number_s: "+number_s)
+          #puts("number_s: "+number_s)
           number = number_s.to_i
           if number != nil then
-            puts ("number: "+number.to_s)
+            #puts ("number: "+number.to_s)
             output_text = output_text.sub(number_s+toreplace2," " * number)
           end
         end
@@ -1754,7 +1760,7 @@ class CosmosysGitController < ApplicationController
       if thisfield != nil then 
         ret = thisfield
       else
-        puts("the row ",row_i," does not have a "+k+" field")                                    
+        puts("the row " + row_i.to_s + " does not have a " + k + " field")                                    
       end
     end
     return ret
@@ -1766,7 +1772,7 @@ class CosmosysGitController < ApplicationController
     if thisfield != nil then 
       ret = thisfield.value
       if ret == nil then
-        puts("the row ",row_i," does not have a "+k+" value")
+        puts("the row " + row_i.to_s + " does not have a " + k + " value")
       end
     end
     return ret
