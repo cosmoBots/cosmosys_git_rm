@@ -6,30 +6,30 @@ class CosmosysGitController < ApplicationController
 
   def menu
     if request.get? then
-      print("menu GET!!!!!")
+      # print("menu GET!!!!!")
     else
-      print("menu POST!!!!!")
+      # print("menu POST!!!!!")
     end
   end
 
   def show
     if request.get? then
-      print("show GET!!!!!")
+      # print("show GET!!!!!")
     else
-      print("show POST!!!!!")
-    end        
+      # print("show POST!!!!!")
+    end
   end
 
   def import
-    @import = (params[:import] || session[:import] || nil) 
+    @import = (params[:import] || session[:import] || nil)
     if @import == nil then
       @import = {}
       @import['from_documents'] = false
-    end    
+    end
     if request.get? then
-      print("import GET!!!!!")
+      # print("import GET!!!!!")
     else
-      print("import POST!!!!!")
+      # print("import POST!!!!!")
       ret = nil
       returnmessage = ""
       puts("Ejecuto la preparacion de gitlab")
@@ -54,9 +54,9 @@ class CosmosysGitController < ApplicationController
           returnmessage += "Problems creating the mirror Redmine repo"
         end
       else
-        returnmessage += "Could not create/update the repo folder"        
+        returnmessage += "Could not create/update the repo folder"
       end
-      if (ret != nil and ret == true) then 
+      if (ret != nil and ret == true) then
         flash.now[:notice] = returnmessage
       else
         flash.now[:error] = returnmessage
@@ -65,9 +65,9 @@ class CosmosysGitController < ApplicationController
     end
 
   end
-  
+
   def export
-    @export = (params[:export] || session[:export] || nil) 
+    @export = (params[:export] || session[:export] || nil)
     if @export == nil then
       @export = {}
       @export['include_subprojects'] = false
@@ -77,15 +77,15 @@ class CosmosysGitController < ApplicationController
     end
     puts @export
     if request.get? then
-      puts("export GET!!!!!")
+      # puts("export GET!!!!!")
     else
-      puts("export POST!!!!!")
+      # puts("export POST!!!!!")
       puts params[:export]
-      puts session[:export]  
+      puts session[:export]
       ret = nil
       returnmessage = ""
       puts("Ejecuto la preparacion de gitlab")
-      check_prepare_gitlab      
+      check_prepare_gitlab
       repo_folder,remoteurl = update_create_repo_folder(@project)
       if repo_folder != nil then
         retvalue,retstr = export_project_repo(repo_folder,@export,@project)
@@ -118,7 +118,7 @@ class CosmosysGitController < ApplicationController
   end
 
   def report
-    @report = (params[:report] || session[:report] || nil) 
+    @report = (params[:report] || session[:report] || nil)
     if @report == nil then
       @report = {}
       @report['include_subprojects'] = false
@@ -128,15 +128,15 @@ class CosmosysGitController < ApplicationController
     end
     puts @report
     if request.get? then
-      puts("report GET!!!!!")
+      # puts("report GET!!!!!")
     else
-      puts("report POST!!!!!")
+      # puts("report POST!!!!!")
       puts params[:report]
-      puts session[:report]  
+      puts session[:report]
       ret = nil
       returnmessage = ""
       puts("Ejecuto la preparacion de gitlab")
-      check_prepare_gitlab      
+      check_prepare_gitlab
       repo_folder,remoteurl = update_create_repo_folder(@project)
       if repo_folder != nil then
         retvalue,retstr = report_project_repo(repo_folder,@report,@project)
@@ -214,7 +214,7 @@ class CosmosysGitController < ApplicationController
                   if not (File.directory?(@@tmpdir)) then
                     require 'fileutils'
                     FileUtils.mkdir_p @@tmpdir
-                  end              
+                  end
                   tmpfile = Tempfile.new('rqdownload',@@tmpdir)
                   begin
                     treedata = @project.csys.show_as_json(nil,root_url,false)
@@ -251,7 +251,7 @@ class CosmosysGitController < ApplicationController
         end
       else
         retstr = "The setting for the template file does not exist: reporting_template_path"
-      end            
+      end
     else
       retstr = "The setting for the reporting path does not exist: reporting_path"
     end
@@ -280,7 +280,7 @@ class CosmosysGitController < ApplicationController
       end
     end
     #print("Project: "+@project.to_s+"\n")
-  end  
+  end
 
   def commit_push_import_doc_repo(repo_folder)
     puts("++++commit_push_import_doc_repo++++")
@@ -324,7 +324,7 @@ class CosmosysGitController < ApplicationController
   end
 
   def check_create_gitlab_prj(gitlabconfig, prj_identifier, ssh_url)
-    puts("+++++++check_create_gitlab_prj++++++++")    
+    puts("+++++++check_create_gitlab_prj++++++++")
     Gitlab.configure do |config|
       config.endpoint = gitlabconfig['endpoint']+'/api/v4'
       config.private_token  = gitlabconfig['authtoken']
@@ -337,7 +337,7 @@ class CosmosysGitController < ApplicationController
       puts("name")
       puts(p.name)
       if (p.ssh_url_to_repo == ssh_url) then
-        thisproject = p 
+        thisproject = p
       end
     }
     if (thisproject == nil) then
@@ -374,10 +374,10 @@ class CosmosysGitController < ApplicationController
               gitlabproject = check_create_gitlab_prj(gitlabconfig,reponame,remoteurl)
               comando = "cd #{ret}; git init; git remote add origin #{remoteurl}"
               puts("\n\n #{comando}")
-              `#{comando}`               
+              `#{comando}`
               comando = "cd #{ret}; git add .;git commit -m \"Initial commit\";git push --all"
               puts("\n\n #{comando}")
-              output = `#{comando}`               
+              output = `#{comando}`
               puts("=====================")
               puts(output)
               puts("Cloned?: "+ret)
@@ -394,11 +394,11 @@ class CosmosysGitController < ApplicationController
     else
       puts("The setting does not exist")
     end
-    return ret    
+    return ret
   end
 
   def download_create_template_repo(repo_folder)
-    puts("+++++++download_create_template_repo++++++++")            
+    puts("+++++++download_create_template_repo++++++++")
     remoteurl = nil
     s = Setting.find_by_name("plugin_cosmosys_git")
     if (s != nil) then
@@ -437,7 +437,7 @@ class CosmosysGitController < ApplicationController
   end
 
   def update_create_repo_folder(thisproject)
-    puts("+++++++update_create_repo_folder++++++++")                
+    puts("+++++++update_create_repo_folder++++++++")
     # Chec if repo folder exists
     repo_folder,remote_url,s = CosmosysProjectGit.get_expected_repo_path(thisproject.identifier)
     puts("The repofolder is "+repo_folder)
@@ -450,7 +450,7 @@ class CosmosysGitController < ApplicationController
             puts("Created!!!"+repo_folder)
             comando = "cd #{repo_folder}; git remote add origin #{remote_url}; git push --all"
             puts("\n\n #{comando}")
-            output = `#{comando}`            
+            output = `#{comando}`
           end
         else
           puts("Error trying to download template for "+repo_folder)
@@ -469,7 +469,7 @@ class CosmosysGitController < ApplicationController
   end
 
   def get_expected_rmrepo_path(prj_identifier)
-    puts("+++++++get_expected_rmrepo_path++++++++")    
+    puts("+++++++get_expected_rmrepo_path++++++++")
     s = Setting.find_by_name("plugin_cosmosys_git")
     if (s != nil) then
       if (s.value != nil) then
@@ -550,7 +550,7 @@ class CosmosysGitController < ApplicationController
   @@dictlistfirstrow = 2
   @@dictlastrow = [1,27] #AA1
   @@issueslastrow = [1,29] #AC1
-  
+
   # Definitions of the cells in the "Items" sheet of the export file
   @@issuesfirstrow = 2
   @@issuesheadersrow = 1
@@ -588,7 +588,7 @@ class CosmosysGitController < ApplicationController
               end
             else
               retstr = "Problems commiting/pushing the Git repo"
-            end      
+            end
           else
             retstr = "We could not load the document to import"
           end
@@ -633,11 +633,11 @@ class CosmosysGitController < ApplicationController
                   if extrasheet != nil then
                     # DICT SHEET ###################
                     if (dictsheet.cell(@@rmprojectidcell[0],@@rmprojectidcell[1]).value != thisproject.identifier) then
-                      retstr = "Project identifer mismatch, " + dictsheet.cell(@@rmprojectidcell[0],@@rmprojectidcell[1]).value + 
+                      retstr = "Project identifer mismatch, " + dictsheet.cell(@@rmprojectidcell[0],@@rmprojectidcell[1]).value +
                         " != "+thisproject.identifier
                     else
                       if (dictsheet.cell(@@projectcodecell[0],@@projectcodecell[1]).value != thisproject.code) then
-                        retstr = "Project code mismatch, " + dictsheet.cell(@@projectcodecell[0],@@projectcodecell[1]).value + 
+                        retstr = "Project code mismatch, " + dictsheet.cell(@@projectcodecell[0],@@projectcodecell[1]).value +
                           " != "+thisproject.code
                       else
                         retstr = ""
@@ -651,10 +651,10 @@ class CosmosysGitController < ApplicationController
                             if thisitem != nil and thisitem.value != nil then
                               element = thisproject.trackers.find_by_name(thisitem.value)
                               if element == nil then
-                                retstr += "The tracker "+thisitem.value+" is not present in the current project, adding it?" 
+                                retstr += "The tracker "+thisitem.value+" is not present in the current project, adding it?"
                                 element = Tracker.find_by_name(thisitem.value)
                                 if element == nil then
-                                  retstr += "The tracker "+thisitem.value+" does not exist" 
+                                  retstr += "The tracker "+thisitem.value+" does not exist"
                                   errorfound = true
                                 else
                                   thisproject.trackers << element
@@ -670,31 +670,31 @@ class CosmosysGitController < ApplicationController
                           if not errorfound then
                             currentrow = @@dictlistfirstrow
                             while (currentrow <= lastrow) do
-                              thisitem = dictsheet.cell(currentrow,@@statusescolumn)                          
+                              thisitem = dictsheet.cell(currentrow,@@statusescolumn)
                               if thisitem != nil and thisitem.value != nil then
                                 element = IssueStatus.find_by_name(thisitem.value)
                                 if element == nil then
                                   retstr += "The status "+thisitem.value+" does not exist"
                                   errorfound = true
-                                end                       
+                                end
                               end
                               currentrow += 1
-                            end  
+                            end
                           end
 
                           if not errorfound then
                             currentrow = @@dictlistfirstrow
                             while (currentrow <= lastrow) do
-                              thisitem = dictsheet.cell(currentrow,@@prioritiescolumn)                          
+                              thisitem = dictsheet.cell(currentrow,@@prioritiescolumn)
                               if thisitem != nil and thisitem.value != nil then
                                 element = IssuePriority.find_by_name(thisitem.value)
                                 if element == nil then
                                   retstr += "The priority "+thisitem.value+" does not exist"
                                   errorfound = true
-                                end                       
+                                end
                               end
                               currentrow += 1
-                            end  
+                            end
                           end
 
                           dictmembers = {}
@@ -704,7 +704,7 @@ class CosmosysGitController < ApplicationController
                           if not errorfound then
                             currentrow = @@dictlistfirstrow
                             while (currentrow <= lastrow) do
-                              thisitem = dictsheet.cell(currentrow,@@teamcolumn)                     
+                              thisitem = dictsheet.cell(currentrow,@@teamcolumn)
                               if thisitem != nil and thisitem.value != nil then
                                 element = dictmembers[thisitem.value]
                                 if element == nil then
@@ -713,46 +713,46 @@ class CosmosysGitController < ApplicationController
                                 end
                               end
                               currentrow += 1
-                            end  
+                            end
                           end
 
                           if not errorfound then
                             currentrow = @@dictlistfirstrow
                             while (currentrow <= lastrow) do
-                              thisitem = dictsheet.cell(currentrow,@@versionscolumn)                     
+                              thisitem = dictsheet.cell(currentrow,@@versionscolumn)
                               if thisitem != nil and thisitem.value != nil then
                                 element = thisproject.versions.find_by_name(thisitem.value)
                                 if element == nil then
                                   retstr += "The version "+thisitem.value+" does not exist"
                                   errorfound = true
-                                end                       
+                                end
                               end
                               currentrow += 1
-                            end  
+                            end
                           end
 
                           if not errorfound then
                             currentrow = @@dictlistfirstrow
                             while (currentrow <= lastrow) do
-                              thisitem = dictsheet.cell(currentrow,@@categoriescolumn)                     
+                              thisitem = dictsheet.cell(currentrow,@@categoriescolumn)
                               if thisitem != nil and thisitem.value != nil then
                                 element = thisproject.issue_categories.find_by_name(thisitem.value)
                                 if element == nil then
                                   retstr += "The category "+thisitem.value+" does not exist"
                                   errorfound = true
-                                end                       
+                                end
                               end
                               currentrow += 1
-                            end  
+                            end
                           end
 
                           if not errorfound then
                             # At this moment we consider the file is being consumed
-                            # and (exceptions apart) any importing issue is a defect of the 
+                            # and (exceptions apart) any importing issue is a defect of the
                             # file, so we never have to import the same file again.
-                            # At the moment we have not found any exception to this, because the 
+                            # At the moment we have not found any exception to this, because the
                             # consistency of the Dict tab and the Redmine project is enought
-                            # to guarantee that a well constructed import file will 
+                            # to guarantee that a well constructed import file will
                             # cause a valid import process.
                             import_file_consumed = true
                             puts("consumed!!!!")
@@ -805,7 +805,7 @@ class CosmosysGitController < ApplicationController
                                     if issuefieldlocation.key?(thiskey) then
                                       thisfield = sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
                                         issuefieldlocation[thiskey][:column])
-                                      if thisfield != nil then 
+                                      if thisfield != nil then
                                         thisident = thisfield.value
                                         if thisident != nil then
                                           thisitem = thisproject.csys.find_issue_by_identifier(thisident,true)
@@ -843,7 +843,7 @@ class CosmosysGitController < ApplicationController
                                         else
                                           thisitem.subject = ret.to_s
                                         end
-                                      end                                      
+                                      end
 
                                       thiskey = "status"
                                       ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
@@ -866,7 +866,7 @@ class CosmosysGitController < ApplicationController
                                           puts("the project team member ",ret," does not exist")
                                         end
                                       end
-                                      
+
                                       thiskey = "version"
                                       ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
                                       if ret != nil then
@@ -887,12 +887,12 @@ class CosmosysGitController < ApplicationController
                                           thisitem.description = convert_imported_text(descr)
                                         end
                                       end
-      
+
                                       thiskey = "estimated_hours"
                                       ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
                                       if ret != nil then
                                         thisitem.estimated_hours = ret
-                                      end                                      
+                                      end
 
                                       thiskey = "start_date"
                                       ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
@@ -904,7 +904,7 @@ class CosmosysGitController < ApplicationController
                                       ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
                                       if ret != nil then
                                         thisitem.due_date = ret
-                                      end                                      
+                                      end
 
                                       IssueCustomField.all.each { |cf|
                                         thiskey = cf.name
@@ -935,7 +935,7 @@ class CosmosysGitController < ApplicationController
                                                 cfty.value = convert_imported_text(rational_str)
                                               end
                                             end
-                                          end                                          
+                                          end
                                         end
                                       }
 
@@ -946,14 +946,14 @@ class CosmosysGitController < ApplicationController
                                         end
                                         puts(thisitem.inspect)
                                         saved = thisitem.save
-                                        puts thisitem.errors.full_messages                                
+                                        puts thisitem.errors.full_messages
                                         puts("item saved:" + saved.to_s)
                                         retvalue = retvalue and saved
                                       end
 
                                       # Now we will obtain the relationships, so in a second loop we can add the relationships
                                       thiskey = "parent"
-                                      # It is important to know if the parent column exists, in order to know if we have to remove 
+                                      # It is important to know if the parent column exists, in order to know if we have to remove
                                       # parent relationships
                                       if issuefieldlocation[thiskey] then
                                         ret = extract_cellvalue_from_key(thiskey,issuefieldlocation,sheetindexes,currentrow)
@@ -1010,7 +1010,7 @@ class CosmosysGitController < ApplicationController
                                       else
                                         thisparentitem = nil
                                         # puts("the parent issue ",parentid," can not be found in the same import document, partial file load?")
-                                      end 
+                                      end
                                       if (thisparentitem == nil) then
                                         thisparentitem = thisproject.csys.find_issue_by_identifier(parentid,true)
                                         if (thisparentitem == nil) then
@@ -1040,7 +1040,7 @@ class CosmosysGitController < ApplicationController
                                   my_filtered_req_relations = thisitem.relations_to
                                   # Al cargar requisitos puede ser que haya antiguas relaciones que ya no existan.  Al finalizar la carga
                                   # deberemos eliminar los remanentes, asi que meteremos la lista de relaciones en una lista de remanentes
-                                  residual_relations = [] 
+                                  residual_relations = []
                                   my_filtered_req_relations.each { |e|
                                     residual_relations << e
                                   }
@@ -1076,7 +1076,7 @@ class CosmosysGitController < ApplicationController
                                         r.relation_type == 'relates' then
                                         removeit = true
                                       end
-                                      
+
                                       if removeit then
                                         r.issue_from.relations_from.delete(r)
                                         r.destroy
@@ -1104,11 +1104,11 @@ class CosmosysGitController < ApplicationController
                                         #print(relation.to_s+" ... nok\n")
                                         relation.errors.full_messages.each  do |message|
                                           print("--> " + message + "\n")
-                                        end                            
+                                        end
                                       end
                                     end
                                   }
-                                  
+
                                   thisitem.errors.clear
                                   if (thisitem.save) then
                                     print(thisitem.csys.get_identifier+" ... relations ok\n")
@@ -1151,7 +1151,7 @@ class CosmosysGitController < ApplicationController
           else
             retstr = "Could not open the book of the import file: "+s3
           end
-          # If we have determined that the import file has been "consumed", then we have to store 
+          # If we have determined that the import file has been "consumed", then we have to store
           # this import operation date to prevent importing the same file.
           if (import_file_consumed) then
             thisproject.csys_git.last_import = thiscommit.committed_on
@@ -1205,12 +1205,12 @@ class CosmosysGitController < ApplicationController
         prot = request.protocol
         if prot == "http://" then
           p.value =  "http"
-          prot = p.value                          
+          prot = p.value
           p.save
         else
           if prot == "https://" then
             p.value = "https"
-            prot = p.value                          
+            prot = p.value
             p.save
           else
             puts "Unknown protocol "+prot+" can not save the Redmine setting"
@@ -1291,7 +1291,7 @@ class CosmosysGitController < ApplicationController
                         IssuePriority.all.each{|s|
                           dictsheet.cell(currentrow,@@prioritiescolumn).value = s.name
                           currentrow += 1
-                        }                      
+                        }
                         currentrow = @@dictlistfirstrow
                         thisproject.members.each {|m|
                           dictsheet.cell(currentrow,@@teamcolumn).value = m.user.login
@@ -1344,7 +1344,7 @@ class CosmosysGitController < ApplicationController
                         include_precedent = issuefieldlocation.key?("precedent_items")
                         include_blocking = issuefieldlocation.key?("blocking_items")
                         include_related = issuefieldlocation.key?("related_items")
-                        
+
                         if export_preferences['include_fields'] then
                           thiskey = "RM#"
                           if issuefieldlocation.key?(thiskey) then
@@ -1359,7 +1359,7 @@ class CosmosysGitController < ApplicationController
                             issuefieldlocation[thiskey] = location
                             lastextrausedcolumn += 1
                             extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
-                          end                          
+                          end
                           thiskey = "tracker"
                           if issuefieldlocation.key?(thiskey) then
                             location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
@@ -1367,13 +1367,13 @@ class CosmosysGitController < ApplicationController
                             lastextrausedcolumn += 1
                             extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
                           end
-                          thiskey = "subject"      
+                          thiskey = "subject"
                           if issuefieldlocation.key?(thiskey) then
                             location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
                             issuefieldlocation[thiskey] = location
                             lastextrausedcolumn += 1
                             extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
-                          end              
+                          end
                           thiskey = "status"
                           if issuefieldlocation.key?(thiskey) then
                             location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
@@ -1381,14 +1381,14 @@ class CosmosysGitController < ApplicationController
                             lastextrausedcolumn += 1
                             extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
                           end
-                          thiskey = "assignee"      
+                          thiskey = "assignee"
                           if issuefieldlocation.key?(thiskey) then
                             location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
                             issuefieldlocation[thiskey] = location
                             lastextrausedcolumn += 1
                             extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
                           end
-                          thiskey = "description"      
+                          thiskey = "description"
                           if issuefieldlocation.key?(thiskey) then
                             location = {:sheet => 'extra', :column =>lastextrausedcolumn+1}
                             issuefieldlocation[thiskey] = location
@@ -1425,7 +1425,7 @@ class CosmosysGitController < ApplicationController
                             issuefieldlocation[thiskey] = location
                             lastextrausedcolumn += 1
                             extrasheet.row(@@issuesheadersrow).cell(lastextrausedcolumn).value = thiskey
-                          end            
+                          end
 
                           if not include_precedent then
                             thiskey = "precedent_items"
@@ -1485,36 +1485,36 @@ class CosmosysGitController < ApplicationController
                           if issuefieldlocation.key?(thiskey) then
                             sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
                               issuefieldlocation[thiskey][:column]).value = i.csys.get_identifier
-                          end                          
+                          end
                           thiskey = "tracker"
                           if issuefieldlocation.key?(thiskey) then
                             sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
                               issuefieldlocation[thiskey][:column]).value = i.tracker.name
                           end
-                          thiskey = "subject"      
+                          thiskey = "subject"
                           if issuefieldlocation.key?(thiskey) then
                             sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
                               issuefieldlocation[thiskey][:column]).value = i.subject
-                          end              
+                          end
                           thiskey = "status"
                           if issuefieldlocation.key?(thiskey) then
                             sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
                               issuefieldlocation[thiskey][:column]).value = i.status.name
                           end
-                          if (i.assigned_to != nil) then              
-                            thiskey = "assignee"      
+                          if (i.assigned_to != nil) then
+                            thiskey = "assignee"
                             if issuefieldlocation.key?(thiskey) then
                               sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
                                 issuefieldlocation[thiskey][:column]).value = i.assigned_to.login
                             end
                           end
-                          thiskey = "description"      
+                          thiskey = "description"
                           if issuefieldlocation.key?(thiskey) then
                             sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
                               issuefieldlocation[thiskey][:column]).value = i.description
                           end
                           if (i.parent != nil) then
-                            thiskey = "parent"      
+                            thiskey = "parent"
                             if issuefieldlocation.key?(thiskey) then
                               sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
                                 issuefieldlocation[thiskey][:column]).value = i.parent.csys.get_identifier
@@ -1546,8 +1546,8 @@ class CosmosysGitController < ApplicationController
                           blkstr = nil
                           relstr = nil
                           rls = i.relations_to
-                          
-                          rls.each{|rl|                          
+
+                          rls.each{|rl|
                             if include_precedent and (rl.relation_type == "precedes") then
                               if rlsstr != nil then
                                 rlsstr += ","
@@ -1573,7 +1573,7 @@ class CosmosysGitController < ApplicationController
                               relstr += rl.issue_from.csys.get_identifier
                             end
                           }
-                          if include_precedent and rlsstr != nil then 
+                          if include_precedent and rlsstr != nil then
                               sheetindexes[issuefieldlocation["precedent_items"][:sheet]].cell(currentrow,
                                 issuefieldlocation["precedent_items"][:column]).value = rlsstr
                           end
@@ -1612,7 +1612,7 @@ class CosmosysGitController < ApplicationController
                               sheetindexes[issuefieldlocation[thiskey][:sheet]].cell(currentrow,
                                 issuefieldlocation[thiskey][:column]).value = i.category.name
                             end
-                          end                                                    
+                          end
 
                           i.custom_values.each{|cv|
                             thiskey = cv.custom_field.name
@@ -1679,8 +1679,8 @@ class CosmosysGitController < ApplicationController
           end
         else
           retstr = "The setting for the template file does not exist: export_template_path"
-        end            
-      else 
+        end
+      else
         retstr = "The export path setting has no extension "+s.value["export_path"]
       end
     else
@@ -1691,7 +1691,7 @@ class CosmosysGitController < ApplicationController
 
   def convert_imported_text(input_text)
     output_text = input_text
-    
+
     # First we have to convert specific OpenOffice/LibreOffice tags
     toreplace = "<text:s/>"
     if output_text.include?(toreplace) then
@@ -1724,11 +1724,11 @@ class CosmosysGitController < ApplicationController
     # Now we have to convert HTML to text
     return Nokogiri::HTML(output_text).text
   end
-  
+
   def obtain_longtext(cell)
     ret = ""
-    first = true 
-    cell.xmlnode.each_element {|e| 
+    first = true
+    cell.xmlnode.each_element {|e|
       if (first) then
         first = false
       else
@@ -1746,21 +1746,21 @@ class CosmosysGitController < ApplicationController
       puts("No existe ",gitlabCfgPath ,",tengo que ejecutar el comando python")
       comando = "python3 ./plugins/cosmosys_git/assets/scripts/gitlab-preparation.py"
       puts("\n\n #{comando}")
-      output = `#{comando}`               
+      output = `#{comando}`
       puts("=====================")
-      puts(output)                
+      puts(output)
     end
   end
 
   def extract_cell_from_key(k,location_dict,sheet_index,row_i)
-    ret = nil    
+    ret = nil
     if location_dict.key?(k) then
       thisfield = sheet_index[location_dict[k][:sheet]].cell(row_i,
       location_dict[k][:column])
-      if thisfield != nil then 
+      if thisfield != nil then
         ret = thisfield
       else
-        puts("the row " + row_i.to_s + " does not have a " + k + " field")                                    
+        puts("the row " + row_i.to_s + " does not have a " + k + " field")
       end
     end
     return ret
@@ -1769,7 +1769,7 @@ class CosmosysGitController < ApplicationController
   def extract_cellvalue_from_key(k,location_dict,sheet_index,row_i)
     ret = nil
     thisfield = extract_cell_from_key(k,location_dict,sheet_index,row_i)
-    if thisfield != nil then 
+    if thisfield != nil then
       ret = thisfield.value
       if ret == nil then
         puts("the row " + row_i.to_s + " does not have a " + k + " value")
@@ -1783,7 +1783,7 @@ class CosmosysGitController < ApplicationController
     # Obtaining the relations string of the given column name (key)
     rel_str = n[k]
     if rel_str != nil then
-      # Separating the related items identifiers 
+      # Separating the related items identifiers
       rel_item_idents = n[k].split(/[\s,]/)
       rel_item_idents.each { |rel_item_ident|
         # Iterating each related item identifier
@@ -1826,4 +1826,3 @@ class CosmosysGitController < ApplicationController
   end
 
 end
-  
