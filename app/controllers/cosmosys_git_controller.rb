@@ -816,7 +816,7 @@ class CosmosysGitController < ApplicationController
                                           dictitems[thisident] = {}
                                           dictitems[thisident]['item'] = thisitem
                                         else
-                                          puts("the row " + currentrow + " does not have an ID")
+                                          puts("the row " + currentrow.to_s + " does not have an ID")
                                         end
                                       end
                                     end
