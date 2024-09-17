@@ -1015,8 +1015,12 @@ class CosmosysGitController < ApplicationController
                                         thisparentitem = thisproject.csys.find_issue_by_identifier(parentid,true)
                                         if (thisparentitem == nil) then
                                           # In case we are importing a partial file load, the parent item can be located at the parent project, let's search for it
-                                          thisparentitem = thisproject.parent.csys.find_issue_by_identifier(parentid,true)
-                                          dictitems[parentid]['item'] = thisparentitem
+                                          if thisproject.parent != nil then
+                                            thisparentitem = thisproject.parent.csys.find_issue_by_identifier(parentid,true)
+                                            dictitems[parentid]['item'] = thisparentitem
+                                          else
+                                            puts "WARNING: This ODS claims to be part of a subdiagram, but it is not"
+                                          end
                                         end
                                       end
                                       if (thisparentitem != nil) then
